@@ -1,0 +1,85 @@
+# Tacit: the shell (the notch, the palette, the panels) and its apps - Praxis, Files, Graphis, Viewer, Activity, Settings,
+# Setup - with their launchers, the session's services and the apps' menu entries. The Tacit session sets TACIT_SHELL
+# and TACIT_BIN to these places and puts /usr/lib/tacit/bin first on PATH.
+pkgname=tacit-shell
+pkgver=0.2.1
+pkgrel=17
+pkgdesc="Tacit: the shell and its apps"
+arch=('aarch64' 'x86_64')
+url="https://github.com/ciscobugger/tacit-shell"
+license=('GPL-3.0-or-later')
+depends=('quickshell' 'qt6-declarative' 'qt6-5compat' 'qt6-positioning' 'syntax-highlighting' 'kirigami'
+         'hyprland' 'hyprlock' 'jq' 'libnotify' 'wl-clipboard' 'grim' 'python' 'matugen' 'brightnessctl'
+         'networkmanager' 'bluez-utils' 'wireplumber' 'cliphist' 'foot' 'xdg-utils' 'glib2' 'git' 'curl'
+         'ripgrep' 'fd' 'imagemagick' 'ffmpeg' 'tacit-fonts' 'tacit-icons'
+         # the colour helpers' environment (below) uses these from the system
+         'python-gobject' 'python-dbus')
+optdepends=('tesseract: text from a part of the screen'
+            'swappy: drawing on a screenshot'
+            'wf-recorder: recording the screen'
+            'hyprpicker: picking a colour from the screen'
+            'ydotool: Praxis typing into other windows'
+            'github-cli: pull requests in the notch'
+            'ddcutil: brightness of an external monitor'
+            'hyprsunset: night light'
+            'easyeffects: the equaliser'
+            'cava: the audio bars'
+            'udisks2: drives in Files')
+makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools')
+# the commit the shell's private repo had when this recipe was written; a release names a tag instead
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=d80bb6658c87977ab29c3520fd7dd77a4c234ebf")
+sha256sums=('SKIP')
+install=tacit-shell.install
+options=('!debug')
+
+build() {
+	cd tacit-shell
+	sh session/btagent/build.sh
+	sh session/filemanager1/build.sh
+	# the shell's own QML modules: the notch's sand (Tacit.Sand) and Graphis's edits (Tacit.Edit)
+	python3 native/sand/gen_shaders.py build-sand/shaders
+	cmake -S native/sand -B build-sand -G Ninja -DCMAKE_BUILD_TYPE=Release
+	cmake --build build-sand
+	cmake -S native/edit -B build-edit -G Ninja -DCMAKE_BUILD_TYPE=Release
+	cmake --build build-edit
+}
+
+package() {
+	cd tacit-shell
+	local shell="$pkgdir/usr/share/tacit/shell" bin="$pkgdir/usr/lib/tacit/bin"
+	install -d "$shell" "$bin"
+	# the shell's tree as committed, less what the packages put elsewhere and what only development uses
+	git archive --format=tar HEAD -- . ':!bin' ':!session' ':!native' ':!translations/tools' ':!modules/code/engine.test.js' ':!.qmlformat.ini' \
+		| tar -x -C "$shell"
+	# the folder is read-only: Python's bytecode is made here, not on first run
+	python -m compileall -q -d /usr/share/tacit/shell "$shell" >/dev/null
+	for f in bin/*; do [ "${f##*/}" = README.md ] || install -m755 "$f" "$bin/"; done
+	install -m755 scripts/activity/activity-open scripts/activity/hyprland-dialog scripts/viewer/viewer-open \
+		session/btagent/quiet-btagent session/filemanager1/quiet-filemanager1 "$bin/"
+	install -Dm644 -t "$pkgdir/usr/lib/systemd/user" session/systemd/user/*.service session/systemd/user/*.target
+	install -Dm644 session/systemd/user/service.d/50-oomd-avoid.conf "$pkgdir/usr/lib/systemd/user/service.d/50-tacit-oomd-avoid.conf"
+	# Tacit's own D-Bus services: first in the user manager's XDG_DATA_DIRS (tacit-session's environment.d)
+	install -Dm644 -t "$pkgdir/usr/share/tacit/dbus-1/services" session/dbus/*.service
+	install -Dm644 -t "$pkgdir/usr/share/applications" session/applications/*.desktop
+	for m in Sand Edit; do
+		install -Dm644 -t "$pkgdir/usr/lib/qt6/qml/Tacit/$m" build-${m,,}/qml/Tacit/$m/qmldir build-${m,,}/qml/Tacit/$m/tacit${m,,}.qmltypes
+		install -Dm755 -t "$pkgdir/usr/lib/qt6/qml/Tacit/$m" build-${m,,}/qml/Tacit/$m/libtacit${m,,}.so
+	done
+	# `qs -c tacit` (the menu entries, the launchers) finds the shell through the system's config folders when the
+	# person has no ~/.config/quickshell/tacit of their own
+	install -d "$pkgdir/etc/xdg/quickshell"
+	ln -s /usr/share/tacit/shell "$pkgdir/etc/xdg/quickshell/tacit"
+	# the Python environment the colour, image and thumbnail helpers activate when the person has none of their own
+	# (session env.lua, scripts/venv.sh): the README's packages, built here at its final place, the build's path then
+	# taken out of its scripts
+	local venv="$pkgdir/usr/lib/tacit/venv"
+	# the colour library at the owner's versions (~/.local/state/quickshell/requirements.txt): a newer materialyoucolor
+	# renamed primary_paletteKeyColor, generate_colors_material.py failed, and a new account's terminal kept its built-in
+	# green (2026-10-17)
+	python -m venv --system-site-packages "$venv"
+	"$venv/bin/pip" install -q --no-cache-dir --disable-pip-version-check \
+		'materialyoucolor==2.0.10' pillow numpy opencv-python-headless loguru click tqdm 'kde-material-you-colors==1.10.1'
+	grep -rlI --null "$pkgdir" "$venv" | xargs -0 -r sed -i "s|$pkgdir||g"
+	printf 'enable focus-priority.service\nenable quiet-btagent.service\nenable quiet-filemanager1.service\n' \
+		| install -Dm644 /dev/stdin "$pkgdir/usr/lib/systemd/user-preset/80-tacit-shell.preset"
+}

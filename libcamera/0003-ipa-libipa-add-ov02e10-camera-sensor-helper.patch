@@ -1,0 +1,38 @@
+From: Tacit
+Subject: [PATCH] ipa: libipa: Add CameraSensorHelper for OmniVision OV02E10
+
+The OV02E10 is the front camera of many Intel laptops since 2023 (IPU6, Meteor
+Lake). libcamera has no helper for it, so the soft ISP reads the analogue gain
+code 0x10 as 16x and AGC never raises the gain: the picture stays dark. From
+drivers/media/i2c/ov02e10.c the code is written to the sensor as is, with
+OV02E10_ANAL_GAIN_MIN 0x10 (unity) and OV02E10_ANAL_GAIN_MAX 0xf8 (15.5x), the
+usual OmniVision 4-bit fractional format. The driver programs no black level
+target, so the helper gives none and the soft ISP measures it.
+
+diff --git a/src/ipa/libipa/camera_sensor_helper.cpp b/src/ipa/libipa/camera_sensor_helper.cpp
+index be6e399a0..e212be384 100644
+--- a/src/ipa/libipa/camera_sensor_helper.cpp
++++ b/src/ipa/libipa/camera_sensor_helper.cpp
+@@ -689,6 +689,22 @@ public:
+ };
+ REGISTER_CAMERA_SENSOR_HELPER("ov02c10", CameraSensorHelperOv02c10)
+ 
++class CameraSensorHelperOv02e10 : public CameraSensorHelper
++{
++public:
++	CameraSensorHelperOv02e10()
++	{
++		/*
++		 * From Linux kernel driver: the analogue gain control is written
++		 * to the sensor as is, OV02E10_ANAL_GAIN_MIN 0x10 (unity) to
++		 * OV02E10_ANAL_GAIN_MAX 0xf8 (15.5x). The driver programs no
++		 * black level target, so none is given here.
++		 */
++		gain_ = AnalogueGainLinear{ 1, 0, 0, 16 };
++	}
++};
++REGISTER_CAMERA_SENSOR_HELPER("ov02e10", CameraSensorHelperOv02e10)
++
+ class CameraSensorHelperOv08x40 : public CameraSensorHelper
+ {
+ public:

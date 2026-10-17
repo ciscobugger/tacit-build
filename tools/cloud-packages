@@ -1,0 +1,73 @@
+#!/bin/bash
+# tools/cloud-packages <recipe> ...: builds Tacit's x86_64 packages on the cloud machine (cef-build-x64, which must be
+# running; it is left as found), in order, in a fresh Arch container. Private sources (github.com/ciscobugger) are
+# fetched here with the GitHub login and go with the recipes, so no login reaches the machine; public ones are fetched
+# there. Packages of ours a recipe needs (tacit-cef for tacit-thyris) come from out/x86_64/. The packages come back into
+# out/x86_64/, each checked as build.sh checks. CPUS (default 8) caps the container beside a running engine build.
+set -eu
+here=$(dirname "$(dirname "$(readlink -f "$0")")"); cd "$here"
+at=(--project YOUR-PROJECT --zone europe-west4-a); vm=cef-build-x64
+[ $# -gt 0 ] || { echo "usage: tools/cloud-packages <recipe> ..." >&2; exit 1; }
+for p in "$@"; do
+	[ -f "$p/PKGBUILD" ] || { echo "no recipe $p" >&2; exit 1; }
+	if grep -q "github.com/ciscobugger" "$p/PKGBUILD"; then
+		(cd "$p" && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="credential.https://github.com.helper" \
+			GIT_CONFIG_VALUE_0="!/usr/bin/gh auth git-credential" makepkg --verifysource --noconfirm >/dev/null 2>&1) \
+			|| { echo "fetching $p's sources failed" >&2; exit 1; }
+	fi
+done
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+mkdir -p out/x86_64
+cat > "$tmp/inside.sh" <<'INSIDE'
+#!/bin/bash
+# in the container: the repos' current Arch, then each recipe as an ordinary user, its needs installed first
+set -eu
+pacman-key --init >/dev/null 2>&1; pacman-key --populate archlinux >/dev/null 2>&1
+pacman -Syu --noconfirm --needed base-devel git cmake ninja meson python >/dev/null
+useradd -m builder 2>/dev/null || true
+mkdir -p /work/new; chown builder /work/new
+for p in "$@"; do
+	echo "== $p"
+	deps=$(cd /work/$p && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}" "${makedepends[@]}"' | sed 's/[<>=].*//' | sort -u)
+	# ours only to build against: a recipe with no build() (the tacit meta package) needs none
+	ours=$(grep -q '^build()' /work/$p/PKGBUILD && printf '%s\n' $deps | grep '^tacit-' || true)
+	theirs=$(printf '%s\n' $deps | grep -v '^tacit-' || true)
+	# and what ours need from Arch to be linked against (tacit-cef's at-spi2-core: Thyris's link failed without it)
+	for d in $ours; do
+		f=$(ls -t /work/new/$d-[0-9]*.pkg.tar.zst /work/have/$d-[0-9]*.pkg.tar.zst 2>/dev/null | head -1 || true)
+		[ -n "$f" ] && theirs="$theirs $(bsdtar -xOf "$f" .PKGINFO | sed -n 's/^depend = //p' | sed 's/[<>=].*//' | grep -v '^tacit-' | tr '\n' ' ')"
+	done
+	if [ -n "$theirs" ] && ! pacman -S --noconfirm --needed $theirs > /work/new/$p.deps.log 2>&1; then
+		echo "   FAILED: its needs ($(grep -m1 'error' /work/new/$p.deps.log))"; continue
+	fi
+	# ours without their own needs (makepkg builds with --nodeps; tacit-shell's fonts and icons are not wanted here)
+	files=$(for d in $ours; do ls -t /work/new/$d-[0-9]*.pkg.tar.zst /work/have/$d-[0-9]*.pkg.tar.zst 2>/dev/null | head -1 || true; done)
+	if [ -n "$files" ] && ! pacman -U --noconfirm --needed -dd $files > /work/new/$p.ours.log 2>&1; then
+		echo "   FAILED: ours ($(grep -m1 'error' /work/new/$p.ours.log))"; continue
+	fi
+	chown -R builder /work/$p
+	su builder -c "cd /work/$p && makepkg -f --noconfirm --nodeps --holdver PKGDEST=/work/new" > /work/new/$p.log 2>&1 \
+		&& echo "   built" || { echo "   FAILED"; tail -20 /work/new/$p.log; }
+done
+# everything back to the machine's own user, who clears it before the next run
+chown -R "$HOSTUID" /work
+INSIDE
+tar -C "$here" --exclude='*/src' --exclude='*/pkg' --exclude='*.pkg.tar.*' -cf "$tmp/recipes.tar" "$@"
+# the newest of each of ours the recipes build against, not every package built here: the upload is the slow part
+need=$(for p in "$@"; do grep -q '^build()' "$p/PKGBUILD" && (cd "$p" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}" "${makedepends[@]}"'); done | sed 's/[<>=].*//' | grep '^tacit-' | sort -u || true)
+have=$(for d in $need; do ls -t out/x86_64/$d-[0-9]*.pkg.tar.zst 2>/dev/null | head -1; done)
+on() { timeout 600 gcloud compute ssh $vm "${at[@]}" --command "$1"; }
+on "sudo rm -rf ~/tacit-x86 && mkdir -p ~/tacit-x86/work/have"
+gcloud compute scp "${at[@]}" "$tmp/recipes.tar" "$tmp/inside.sh" $have $vm:~/tacit-x86/ >/dev/null
+# the build runs on there by itself (an hour for Qt Declarative); this side looks every minute
+on "cd ~/tacit-x86 && tar -xf recipes.tar -C work && mv inside.sh work/ && { mv tacit-*.pkg.tar.zst work/have/ 2>/dev/null || true; } \
+    && (setsid nohup bash -c 'sudo docker run --rm --network=host --cpus=${CPUS:-8} -e HOSTUID=\$(id -u) -v \$HOME/tacit-x86/work:/work archlinux:latest bash /work/inside.sh $* > \$HOME/tacit-x86/run.log 2>&1; echo \$? > \$HOME/tacit-x86/done' > /dev/null 2>&1 < /dev/null &)"
+until on "test -f ~/tacit-x86/done" 2>/dev/null; do sleep 60; done
+on "cat ~/tacit-x86/run.log"
+on "cd ~/tacit-x86/work/new && tar -cf ../new.tar *.pkg.tar.zst *.log 2>/dev/null; true"
+gcloud compute scp "${at[@]}" $vm:~/tacit-x86/work/new.tar "$tmp/" >/dev/null
+tar -xf "$tmp/new.tar" -C out/x86_64/
+for f in $(tar -tf "$tmp/new.tar" | grep '\.pkg\.tar\.zst$'); do
+	bad=$(bsdtar -tf "out/x86_64/$f" | grep -E "^(home|usr/local|root)/" || true)
+	echo "   $f  $( [ -z "$bad" ] && echo "places ok" || echo "BAD PLACES: $bad")"
+done

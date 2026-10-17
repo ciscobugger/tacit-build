@@ -1,0 +1,17 @@
+*/src/
+*/pkg/
+*/*.pkg.tar.*
+*/tacit-*/
+*/agent-host/
+out/
+# makepkg's clones of the git sources, named after each source
+tacit-device-book4-edge/boot/
+tacit-device-book4-edge/charge/
+tacit-device-book4-edge/port/
+tacit-foot/foot/
+tacit-foot/tllist/
+libcamera/libcamera/
+tacit-qt6-declarative/qtdeclarative/
+*/*.tar.gz
+*/*.tar.zst
+*/.cargo/

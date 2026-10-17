@@ -1,0 +1,45 @@
+# Tacit: the foot terminal with Tacit's text rendering (tacit-foot-text.patch: the same gamma as Tacit's Qt text).
+# Replaces Arch's foot; the terminfo stays Arch's foot-terminfo.
+pkgname=tacit-foot
+_footver=1.28.0
+pkgver=1.28.0.1
+pkgrel=3
+pkgdesc="Tacit: the foot terminal with Tacit's text"
+arch=('aarch64' 'x86_64')
+url="https://github.com/ciscobugger/tacit-foot"
+license=('MIT')
+depends=('fcft' 'fontconfig' 'libxkbcommon' 'pixman' 'libutf8proc' 'wayland' 'foot-terminfo')
+makedepends=('git' 'meson' 'ninja' 'scdoc' 'tllist' 'wayland-protocols')
+provides=("foot=$_footver")
+conflicts=('foot')
+source=("foot::git+https://codeberg.org/dnkl/foot.git#tag=$_footver"
+        "tacit-foot::git+https://github.com/ciscobugger/tacit-foot.git#tag=v$_footver-1"
+        "tllist::git+https://codeberg.org/dnkl/tllist.git#tag=1.1.0"
+        'foot.ini')
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+backup=('etc/xdg/foot/foot.ini')
+options=('!debug')
+
+prepare() {
+	cd foot
+	patch -Np1 -i ../tacit-foot/tacit-foot-text.patch
+	# tllist is headers only. A build without Arch's installed (makepkg --nodeps on a machine that never had it)
+	# gets a pkg-config file for these headers, which fcft's own pkg-config file needs as well
+	if ! pkg-config --exists tllist; then
+		mkdir -p "$srcdir/pc"
+		printf 'Name: tllist\nDescription: a C header-only typed linked list\nVersion: 1.1.0\nCflags: -I%s\n' "$srcdir/tllist" > "$srcdir/pc/tllist.pc"
+	fi
+}
+
+build() {
+	export PKG_CONFIG_PATH="$srcdir/pc${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+	arch-meson foot build -Dterminfo=disabled -Dime=true -Dgrapheme-clustering=enabled
+	meson compile -C build
+}
+
+package() {
+	meson install -C build --destdir "$pkgdir"
+	install -Dm644 foot/LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+	# Tacit's terminal settings, not foot's commented example
+	install -Dm644 foot.ini "$pkgdir/etc/xdg/foot/foot.ini"
+}

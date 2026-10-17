@@ -1,0 +1,47 @@
+#!/bin/bash
+# tools/buildroot [package ...]: builds Tacit packages in a sealed Arch copy against the repos' current versions, not this
+# computer's. Needs no root: the copy lives in ~/.cache/tacit-buildroot and is made and entered through user namespaces.
+#   tools/buildroot --update          make the copy, or bring it up to date with the repos
+#   tools/buildroot qt6-declarative   build a recipe (a folder here) inside it; the packages land in out/<arch>/buildroot
+# The repos and their keys are this computer's (/etc/pacman.conf, /etc/pacman.d/gnupg). Installs nothing here.
+set -eu
+here=$(dirname "$(dirname "$(readlink -f "$0")")")
+br=${TACIT_BUILDROOT:-$HOME/.cache/tacit-buildroot}
+root=$br/root
+arch=$(uname -m)
+base=(base-devel git cmake ninja meson python)
+
+# pacman as root of the copy only: uid 0 inside a user namespace is this user outside it
+pac() {
+	unshare -r pacman --root "$root" --cachedir "$br/cache" --gpgdir "$br/gnupg" --logfile "$br/pacman.log" \
+		--noconfirm --disable-sandbox "$@"
+}
+
+update() {
+	mkdir -p "$root/var/lib/pacman" "$br/cache"
+	# the keys to check package signatures; only the public parts are readable, and only they are needed
+	[ -d "$br/gnupg" ] || { mkdir -p "$br/gnupg"; cp /etc/pacman.d/gnupg/pubring.gpg /etc/pacman.d/gnupg/trustdb.gpg "$br/gnupg/"; }
+	pac -Syu --needed "${base[@]}"
+	cp /etc/resolv.conf "$root/etc/resolv.conf"
+	# the builder: this user's uid inside, so makepkg does not run as root
+	grep -q "^builder:" "$root/etc/passwd" || echo "builder:x:$(id -u):$(id -g)::/build:/bin/bash" >> "$root/etc/passwd"
+	grep -q "^builder:" "$root/etc/group" || echo "builder:x:$(id -g):" >> "$root/etc/group"
+}
+
+build() {
+	local p=$1 deps
+	[ -f "$here/$p/PKGBUILD" ] || { echo "no recipe $p"; return 1; }
+	# the recipe's build needs, from the repos, into the copy
+	deps=$(cd "$here/$p" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}" "${makedepends[@]}"' | sed 's/[<>=].*//' | sort -u)
+	pac -S --needed $deps
+	mkdir -p "$here/out/$arch/buildroot"
+	bwrap --bind "$root" / --dev /dev --proc /proc --tmpfs /tmp \
+		--bind "$here/$p" /build --bind "$here/out/$arch/buildroot" /out \
+		--unshare-user --uid "$(id -u)" --gid "$(id -g)" --unshare-ipc --unshare-pid --die-with-parent \
+		--setenv HOME /build --chdir /build \
+		makepkg -f --cleanbuild --noconfirm --nodeps PKGDEST=/out
+}
+
+if [ "${1:-}" = --update ]; then update; exit; fi
+[ -d "$root/usr" ] || update
+for p in "$@"; do build "$p"; done

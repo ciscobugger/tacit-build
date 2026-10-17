@@ -1,0 +1,4 @@
+# On for every person on the computer: the session's services start with it.
+post_install() {
+	systemctl --global preset focus-priority.service quiet-btagent.service quiet-filemanager1.service >/dev/null 2>&1 || true
+}

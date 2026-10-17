@@ -1,0 +1,9 @@
+post_install() {
+	systemctl preset book4-charge.service zram-swap.service tacit-msm-load.service >/dev/null 2>&1 || true
+	systemctl daemon-reload >/dev/null 2>&1 || true
+	udevadm control --reload-rules >/dev/null 2>&1 || true
+}
+post_upgrade() {
+	systemctl daemon-reload >/dev/null 2>&1 || true
+	udevadm control --reload-rules >/dev/null 2>&1 || true
+}

@@ -1,0 +1,33 @@
+# Tacit: the desktop portal - file dialogs and Open with through Files, the keyring prompt and the screen share
+# picker as Tacit sheets. The sheets themselves are part of tacit-shell.
+pkgname=tacit-portal
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Tacit: file dialogs, Open with, keyring prompt and share picker"
+arch=('aarch64' 'x86_64')
+url="https://github.com/ciscobugger/tacit-portal"
+license=('GPL-3.0-or-later')
+depends=('qt6-base' 'gcr' 'glib2' 'json-glib' 'xdg-desktop-portal' 'python')
+makedepends=('cmake' 'git')
+source=("git+https://github.com/ciscobugger/tacit-portal.git#tag=v$pkgver")
+sha256sums=('SKIP')
+options=('!debug')
+
+build() {
+	cd tacit-portal
+	cmake -B build -DCMAKE_BUILD_TYPE=Release
+	cmake --build build --target tacit-portal
+	make -C keyring-prompter
+}
+
+package() {
+	cd tacit-portal
+	install -Dm755 build/tacit-portal "$pkgdir/usr/lib/tacit-portal/tacit-portal"
+	install -Dm644 packaging/org.freedesktop.impl.portal.desktop.tacit.service -t "$pkgdir/usr/share/dbus-1/services/"
+	install -Dm644 install/tacit.portal -t "$pkgdir/usr/share/xdg-desktop-portal/portals/"
+	install -Dm644 packaging/tacit-portals.conf -t "$pkgdir/usr/share/xdg-desktop-portal/"
+	install -Dm755 keyring-prompter/tacit-keyring-prompter -t "$pkgdir/usr/bin/"
+	install -Dm644 packaging/org.gnome.keyring.SystemPrompter.service packaging/org.gnome.keyring.PrivatePrompter.service \
+		-t "$pkgdir/usr/share/tacit/dbus-1/services/"
+	install -Dm755 share-picker/tacit-share-picker -t "$pkgdir/usr/bin/"
+}

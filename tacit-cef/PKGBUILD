@@ -1,0 +1,40 @@
+# Tacit: the web engine Thyris runs on - CEF (Chromium) built with Tacit's patches (Opsis's script world and navigation,
+# error pages, security keys, Thyris's name, text rendering; ~/dev/tacit-web, ~/book4-edge/cef-pgo). tacit-cef is what
+# runs; tacit-cef-sdk is what Thyris builds against (CEF's headers and wrapper, the same release). The sources are made
+# by tools/cef-sources from an engine build: tacit-cef-<ver>-<build>-<arch>.tar.zst and tacit-cef-sdk-<ver>.tar.zst.
+pkgbase=tacit-cef
+pkgname=('tacit-cef' 'tacit-cef-sdk')
+pkgver=154.0.34
+_build=errorpages-pauth
+pkgrel=1
+pkgdesc="Tacit: the web engine Thyris runs on (CEF $pkgver, Chromium 154, Tacit's patches)"
+arch=('aarch64' 'x86_64')
+url="https://github.com/ciscobugger/tacit-packages"
+license=('BSD-3-Clause')
+source=("tacit-cef-sdk-$pkgver.tar.zst")
+source_aarch64=("tacit-cef-$pkgver-$_build-aarch64.tar.zst")
+source_x86_64=("tacit-cef-$pkgver-$_build-x86_64.tar.zst")
+sha256sums=('6dc7effdf24350f3a24ec7bf0939217c6c9847965875a24b3f7a2650f8c58962')
+sha256sums_aarch64=('23c03e233beeb4e9aebab8796c76adde69d30de01f16e623189ac22a7df9c980')
+sha256sums_x86_64=('7575c7f173fc2c1b1543a657902fb96bb602e3081b35b233af81125b52fa3844')
+options=('!strip' '!debug')
+
+package_tacit-cef() {
+	depends=('alsa-lib' 'at-spi2-core' 'cairo' 'dbus' 'expat' 'gcc-libs' 'glib2' 'glibc' 'libcups' 'libx11' 'libxcb'
+	         'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxkbcommon' 'libxrandr' 'mesa' 'nspr' 'nss' 'pango'
+	         'systemd-libs')
+	install -d "$pkgdir/usr/lib/tacit/cef"
+	cp -a "engine/." "$pkgdir/usr/lib/tacit/cef/"
+	# Chromium's setuid sandbox helper, for a kernel without unprivileged user namespaces (as Chrome ships it)
+	chmod 4755 "$pkgdir/usr/lib/tacit/cef/chrome-sandbox"
+	install -Dm644 sdk/LICENSE.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE.txt"
+}
+
+package_tacit-cef-sdk() {
+	pkgdesc="Tacit: CEF $pkgver's headers and wrapper, to build Thyris against tacit-cef"
+	arch=('any')
+	depends=("tacit-cef=$pkgver")
+	install -d "$pkgdir/usr/share/tacit/cef-sdk"
+	cp -a sdk/. "$pkgdir/usr/share/tacit/cef-sdk/"
+	install -Dm644 sdk/LICENSE.txt "$pkgdir/usr/share/licenses/$pkgname/LICENSE.txt"
+}

@@ -1,0 +1,41 @@
+#!/bin/bash
+# tools/publish <package file> ...: signs Tacit packages and adds them to [tacit], the repo in the Google Cloud bucket
+# (gs://tacit-packages-2aafc574/<arch>/, private while Tacit is). An "any" package goes into every arch's repo. Each
+# package gets a detached signature by Tacit's signing subkey (tools/tacit-key; the keyring in
+# ~/.config/tacit-packages/gnupg), the repo's database too. Older versions stay in the bucket, so an update can be
+# taken back; the database names the newest only.
+set -eu
+bucket=gs://tacit-packages-2aafc574
+mirror=${TACIT_REPO_MIRROR:-$HOME/.cache/tacit-repo}
+export GNUPGHOME=$HOME/.config/tacit-packages/gnupg
+export GPGKEY=$(cat "$HOME/.config/tacit-packages/signing-key")
+[ $# -gt 0 ] || { echo "usage: tools/publish <package file> ..." >&2; exit 1; }
+declare -A by_arch
+for f in "$@"; do
+	[ -f "$f" ] || { echo "publish: no file $f" >&2; exit 1; }
+	a=$(bsdtar -xOf "$f" .PKGINFO | sed -n 's/^arch = //p')
+	case "$a" in
+		any) for each in aarch64 x86_64; do by_arch[$each]+=" $(readlink -f "$f")"; done ;;
+		aarch64|x86_64) by_arch[$a]+=" $(readlink -f "$f")" ;;
+		*) echo "publish: $f is for $a" >&2; exit 1 ;;
+	esac
+done
+for a in "${!by_arch[@]}"; do
+	dir=$mirror/$a
+	mkdir -p "$dir"
+	# the repo as the bucket has it (a first publish starts it)
+	gcloud storage rsync -q "$bucket/$a" "$dir" 2>/dev/null || true
+	new=()
+	for f in ${by_arch[$a]}; do
+		cp -f "$f" "$dir/"
+		gpg --batch --yes --detach-sign --no-armor -u "$GPGKEY" -o "$dir/$(basename "$f").sig" "$dir/$(basename "$f")"
+		new+=("$dir/$(basename "$f")")
+	done
+	repo-add -q --sign --key "$GPGKEY" --verify "$dir/tacit.db.tar.zst" "${new[@]}"
+	# the bucket has no links: the names pacman asks for as files
+	for n in tacit.db tacit.files tacit.db.sig tacit.files.sig; do
+		[ -L "$dir/$n" ] && cp --remove-destination "$(readlink -f "$dir/$n")" "$dir/$n"
+	done
+	gcloud storage rsync -q "$dir" "$bucket/$a"
+	echo "[tacit] $a: $(printf '%s ' "${new[@]##*/}")"
+done

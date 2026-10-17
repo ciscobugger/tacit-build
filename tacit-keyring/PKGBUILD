@@ -1,0 +1,17 @@
+# Tacit: the key Tacit's packages are signed with, for pacman's keyring (as archlinux-keyring brings Arch's). The master
+# (certify only) is Cloud KMS key tacit/packages-master in YOUR-PROJECT; packages are signed by its subkey
+# (tools/tacit-key). Fingerprint 141AB0375DCEE1F546BCC32294D3C7B496EE6E61.
+pkgname=tacit-keyring
+pkgver=20261016
+pkgrel=1
+pkgdesc="Tacit: the key Tacit's packages are signed with"
+arch=('any')
+url="https://github.com/ciscobugger/tacit-packages"
+license=('GPL-3.0-or-later')
+install=tacit-keyring.install
+source=('tacit.gpg' 'tacit-trusted' 'tacit-revoked')
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+
+package() {
+	install -Dm644 tacit.gpg tacit-trusted tacit-revoked -t "$pkgdir/usr/share/pacman/keyrings/"
+}

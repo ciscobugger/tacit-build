@@ -1,0 +1,42 @@
+# Tacit: Thyris, the web browser (~/dev/browser, repo tacit-opsis), on Tacit's own web engine (tacit-cef). Built against
+# tacit-cef-sdk; the binaries find the engine in /usr/lib/tacit/cef (their run path), and it finds them beside itself.
+pkgname=tacit-thyris
+pkgver=0.1.4
+pkgrel=4
+_cef=154.0.34
+pkgdesc="Tacit: Thyris, the web browser"
+arch=('aarch64' 'x86_64')
+url="https://github.com/ciscobugger/tacit-opsis"
+license=('GPL-3.0-or-later')
+# qt6-webengine for Qt PDF (the PDF viewer) and qwebengine_convert_dict (spell check's dictionaries); no Qt WebEngine
+# page is made
+depends=("tacit-cef=$_cef" 'qt6-base' 'qt6-declarative' 'qt6-webchannel' 'qt6-websockets' 'qt6-webengine' 'qt6-svg'
+         'qt6-imageformats' 'libcups' 'sqlite' 'openssl' 'libglvnd' 'libxkbcommon' 'hicolor-icon-theme')
+optdepends=('hunspell-en_gb: spell check in British English'
+            'hunspell-en_us: spell check in American English')
+makedepends=("tacit-cef-sdk=$_cef" 'cmake' 'ninja' 'git' 'rust' 'qt6-shadertools' 'patchelf')
+source=("git+https://github.com/ciscobugger/tacit-opsis.git#commit=82914016bce8de325b05d79ee912dac2c0a03b7f"
+        'thyris' 'thyris.desktop')
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+options=('!debug')
+
+build() {
+	# CEF's wrapper from the SDK, linked against tacit-cef's libcef.so
+	cp -a /usr/share/tacit/cef-sdk cef
+	install -d cef/Release
+	ln -sf /usr/lib/tacit/cef/libcef.so /usr/lib/tacit/cef/icudtl.dat cef/Release/
+	local cefarch=$CARCH; [ "$CARCH" = aarch64 ] && cefarch=arm64      # CEF's own name, else its flags are x86's
+	# with CEF's own flags only: makepkg's _FORTIFY_SOURCE=3 against CEF's =2 is an error under its -Werror
+	(unset CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+	 cmake -S cef -B cef/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPROJECT_ARCH=$cefarch
+	 cmake --build cef/build --target libcef_dll_wrapper)
+	cmake -S tacit-opsis -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBROWSER_ENGINE=cef -DCEF_ROOT="$srcdir/cef"
+	cmake --build build --target browser browser-page
+}
+
+package() {
+	install -Dm755 build/browser build/browser-page -t "$pkgdir/usr/lib/tacit/thyris/"
+	patchelf --set-rpath /usr/lib/tacit/cef "$pkgdir/usr/lib/tacit/thyris/browser" "$pkgdir/usr/lib/tacit/thyris/browser-page"
+	install -Dm755 thyris -t "$pkgdir/usr/bin/"
+	install -Dm644 thyris.desktop -t "$pkgdir/usr/share/applications/"
+}

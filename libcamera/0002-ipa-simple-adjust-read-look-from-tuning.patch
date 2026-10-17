@@ -1,0 +1,88 @@
+From: Book4 Edge port
+Subject: [PATCH] ipa: simple: Read gamma, contrast and saturation from the tuning file
+
+The Adjust algorithm hardcodes gamma, contrast and saturation and declares its
+tuningData argument [[maybe_unused]], so a sensor whose look needs adjusting
+cannot express that anywhere. configure() also resets the knobs on every
+configuration, so an application would have to re-apply the controls on every
+stream start - and PipeWire never sets them at all, which leaves the soft ISP
+look effectively fixed for any pipeline not driven by a bespoke application.
+
+Read the three values from the tuning file, keeping the existing constants as
+defaults so behaviour is unchanged when they are absent. This makes the look a
+property of the tuning file, exactly as the CCM already is.
+
+--- a/src/ipa/simple/algorithms/adjust.h
++++ b/src/ipa/simple/algorithms/adjust.h
+@@ -43,6 +43,18 @@
+ 
+ private:
+ 	void applySaturation(Matrix<float, 3, 3> &ccm, float saturation);
++
++	/*
++	 * Defaults taken from the tuning file. Upstream hardcodes gamma,
++	 * contrast and saturation and ignores tuningData entirely, so a
++	 * sensor whose look needs adjusting has no way to express it - every
++	 * application would have to set the controls by hand, and PipeWire
++	 * never does. Reading them here makes the look a property of the
++	 * tuning file, like the CCM already is.
++	 */
++	float gamma_ = kDefaultGamma;
++	std::optional<float> contrast_;
++	std::optional<float> saturation_;
+ };
+ 
+ } /* namespace ipa::soft::algorithms */
+--- a/src/ipa/simple/algorithms/adjust.cpp
++++ b/src/ipa/simple/algorithms/adjust.cpp
+@@ -6,6 +6,8 @@
+  * Common image adjustments
+  */
+ 
++#include <algorithm>
++
+ #include "adjust.h"
+ 
+ #include <libcamera/base/log.h>
+@@ -24,24 +26,34 @@
+ 
+ LOG_DEFINE_CATEGORY(IPASoftAdjust)
+ 
+-int Adjust::init(IPAContext &context, [[maybe_unused]] const ValueNode &tuningData)
++int Adjust::init(IPAContext &context, const ValueNode &tuningData)
+ {
++	gamma_ = tuningData["gamma"].get<float>().value_or(kDefaultGamma);
++
++	auto contrast = tuningData["contrast"].get<float>();
++	if (contrast)
++		contrast_ = std::clamp(*contrast, 0.0f, 2.0f);
++
++	auto saturation = tuningData["saturation"].get<float>();
++	if (saturation)
++		saturation_ = std::clamp(*saturation, 0.0f, 2.0f);
++
+ 	context.ctrlMap[&controls::Gamma] =
+-		ControlInfo(0.1f, 10.0f, kDefaultGamma);
++		ControlInfo(0.1f, 10.0f, gamma_);
+ 	context.ctrlMap[&controls::Contrast] =
+-		ControlInfo(0.0f, 2.0f, kDefaultContrast);
++		ControlInfo(0.0f, 2.0f, contrast_.value_or(kDefaultContrast));
+ 	if (context.ccmEnabled)
+ 		context.ctrlMap[&controls::Saturation] =
+-			ControlInfo(0.0f, 2.0f, kDefaultSaturation);
++			ControlInfo(0.0f, 2.0f, saturation_.value_or(kDefaultSaturation));
+ 	return 0;
+ }
+ 
+ int Adjust::configure(IPAContext &context,
+ 		      [[maybe_unused]] const IPAConfigInfo &configInfo)
+ {
+-	context.activeState.knobs.gamma = kDefaultGamma;
+-	context.activeState.knobs.contrast = std::optional<float>();
+-	context.activeState.knobs.saturation = std::optional<float>();
++	context.activeState.knobs.gamma = gamma_;
++	context.activeState.knobs.contrast = contrast_;
++	context.activeState.knobs.saturation = saturation_;
+ 
+ 	return 0;
+ }

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Thyris
+GenericName=Web Browser
+Exec=thyris %u
+Icon=web-browser
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+StartupWMClass=browser-cef

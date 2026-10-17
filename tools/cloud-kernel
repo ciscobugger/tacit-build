@@ -1,0 +1,56 @@
+#!/bin/bash
+# cloud-kernel: builds the Book4 Edge kernel for linux-book4-edge on the cloud build machine (x86_64, cross-compiling
+# for arm64) and brings back one tarball: Image, the device trees, the modules, the config. The laptop only packages it.
+#
+#   tools/cloud-kernel [--force]      -> out/kernel/linux-book4-edge-<version>.tar.zst
+#
+# The machine is the one ~/.config/opsis/cloud.env names (it powers itself off when idle). It is shared with Opsis's
+# checks: without --force this refuses to start while anything else runs there.
+set -euo pipefail
+cd "$(dirname "$(readlink -f "$0")")/.."
+. "$HOME/.config/opsis/cloud.env"     # CLOUD_VM, CLOUD_ZONE, CLOUD_PROJECT, GCLOUD
+G=("$GCLOUD" --project "$CLOUD_PROJECT")
+PORT=${PORT:-$HOME/book4-edge/release-repo}
+BASE_REPO=https://github.com/zensanp/linux-book4-edge.git
+BASE_COMMIT=2685c75587ff                       # README of the port repo; patches/ apply on top
+OUT=out/kernel; mkdir -p "$OUT"
+
+state=$("${G[@]}" compute instances describe "$CLOUD_VM" --zone "$CLOUD_ZONE" --format='value(status)')
+if [ "$state" = RUNNING ] && [ "${1:-}" != --force ]; then
+	busy=$("${G[@]}" compute ssh "$CLOUD_VM" --zone "$CLOUD_ZONE" --command 'pgrep -fc "run.sh|docker run|ninja|make" || true' 2>/dev/null | tail -1)
+	if [ "${busy:-0}" != 0 ]; then echo "cloud-kernel: the machine is busy ($busy jobs); try later or --force" >&2; exit 3; fi
+fi
+[ "$state" = RUNNING ] || "${G[@]}" compute instances start "$CLOUD_VM" --zone "$CLOUD_ZONE" --quiet
+
+# what the build needs from the port repo: the patches (not the debug one, not running/), the config
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/in/patches"
+cp "$PORT"/patches/0*.patch "$tmp/in/patches/"
+cp "$PORT/config/book4-edge.config" "$tmp/in/config"
+tar -C "$tmp/in" -czf "$tmp/in.tgz" .
+"${G[@]}" compute scp --zone "$CLOUD_ZONE" "$tmp/in.tgz" "$CLOUD_VM":kernel-in.tgz --quiet
+
+"${G[@]}" compute ssh "$CLOUD_VM" --zone "$CLOUD_ZONE" --command "bash -s" <<REMOTE
+set -euo pipefail
+command -v aarch64-linux-gnu-gcc >/dev/null || sudo apt-get install -y -q gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev cpio kmod zstd >/dev/null
+rm -rf ~/kernel && mkdir -p ~/kernel/in && cd ~/kernel && tar -C in -xzf ~/kernel-in.tgz
+git init -q src && cd src && git remote add origin $BASE_REPO
+git fetch -q --depth 1 origin $BASE_COMMIT && git checkout -q FETCH_HEAD
+for p in ../in/patches/*.patch; do git apply "\$p"; done
+cp ../in/config .config
+export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+make -s olddefconfig
+nice make -s -j\$(nproc) Image dtbs modules
+rel=\$(make -s kernelrelease)
+rm -rf ../out && mkdir -p ../out/boot ../out/dtbs
+cp arch/arm64/boot/Image ../out/boot/Image
+cp System.map .config ../out/boot/
+make -s INSTALL_MOD_PATH=../out INSTALL_MOD_STRIP=1 modules_install
+make -s INSTALL_DTBS_PATH=../out/dtbs dtbs_install
+echo "\$rel" > ../out/kernelrelease
+tar -C ../out -I 'zstd -T0 -10' -cf ~/kernel-out.tar.zst .
+echo "built \$rel"
+REMOTE
+rel=$("${G[@]}" compute ssh "$CLOUD_VM" --zone "$CLOUD_ZONE" --command 'cat ~/kernel/out/kernelrelease' | tail -1)
+"${G[@]}" compute scp --zone "$CLOUD_ZONE" "$CLOUD_VM":kernel-out.tar.zst "$OUT/linux-book4-edge-$rel.tar.zst" --quiet
+echo "$OUT/linux-book4-edge-$rel.tar.zst"

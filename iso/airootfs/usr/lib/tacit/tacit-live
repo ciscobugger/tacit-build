@@ -1,0 +1,19 @@
+#!/bin/bash
+# Tacit's live system only (the installer removes it): the live user "tacit", no password, able to run the installer;
+# its session opens Setup first (a custom/execs.lua of its own, after Tacit's).
+set -eu
+id tacit >/dev/null 2>&1 && exit 0
+useradd -m -G wheel,video,audio,input,network -s /usr/bin/fish tacit
+passwd -d tacit >/dev/null
+echo 'tacit ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-tacit-live
+chmod 440 /etc/sudoers.d/10-tacit-live
+install -d -o tacit -g tacit /home/tacit/.config/hypr/custom
+cat > /home/tacit/.config/hypr/custom/execs.lua <<'LUA'
+-- Tacit's live system: Setup first, over the desktop
+hl.on("hyprland.start", function ()
+    hl.exec_cmd("qs -p $TACIT_SHELL/setup.qml")
+end)
+LUA
+# all of ~/.config the person's: install -d gave only its last folder to tacit, and fish then could not keep its
+# settings ("can not save universal variables", the VM test 2026-10-16)
+chown -R tacit:tacit /home/tacit/.config

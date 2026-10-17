@@ -1,0 +1,22 @@
+# Tacit: the processor runs at full speed on the charger and saves power on battery.
+pkgname=tacit-cpu-policy
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Tacit: processor speed that follows the charger"
+arch=('any')
+url="https://github.com/ciscobugger/tacit-cpu-policy"
+license=('GPL-3.0-or-later')
+depends=('bash' 'systemd')
+makedepends=('git')
+install=tacit-cpu-policy.install
+source=("git+https://github.com/ciscobugger/tacit-cpu-policy.git#tag=v$pkgver" "80-tacit-cpu-policy.preset")
+sha256sums=('SKIP' 'SKIP')
+
+package() {
+	cd tacit-cpu-policy
+	install -Dm755 tacit-cpu-policy "$pkgdir/usr/bin/tacit-cpu-policy"
+	install -Dm644 91-tacit-cpu-policy.rules "$pkgdir/usr/lib/udev/rules.d/91-tacit-cpu-policy.rules"
+	install -Dm644 tacit-cpu-policy.service "$pkgdir/usr/lib/systemd/system/tacit-cpu-policy.service"
+	install -Dm755 tacit-cpu-policy.sleep "$pkgdir/usr/lib/systemd/system-sleep/tacit-cpu-policy"
+	install -Dm644 "$srcdir/80-tacit-cpu-policy.preset" "$pkgdir/usr/lib/systemd/system-preset/80-tacit-cpu-policy.preset"
+}

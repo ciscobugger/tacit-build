@@ -1,0 +1,191 @@
+# Based on the Arch Linux libcamera PKGBUILD (David Runge, Carl Smedstad).
+# Trimmed for the Book4 Edge port: builds only libcamera, libcamera-ipa and
+# libcamera-tools, with documentation, the GStreamer plugin and the Python
+# bindings disabled so no texlive/sphinx/doxygen/pybind11 are needed.
+#
+# The functional changes: sensor helpers libcamera lacks, which teach the soft ISP how a sensor encodes analogue gain
+# (0001 OV02C10: the Book4's and many Intel laptops'; 0003 OV02E10: Intel laptops since 2023), and 0002, the look
+# (gamma, contrast, saturation) read from the tuning file. Tacit ships it on x86_64 too: Intel laptops' MIPI cameras
+# (IPU6, IPU7) go through the same soft ISP.
+
+pkgbase=libcamera
+pkgname=(
+  libcamera
+  libcamera-ipa
+  libcamera-tools
+)
+pkgver=0.7.2
+pkgrel=4.2
+pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
+arch=(aarch64 x86_64)
+# libcamera-ipa is not stripped (stripping breaks the IPA signatures), so keep
+# -g out of the build or every IPA module ships at 3.8 MB instead of 210 KB.
+options=(!debug)
+url="https://libcamera.org/"
+_url=https://git.libcamera.org/libcamera/libcamera.git
+makedepends=(
+  git
+  gtest
+  libdrm
+  libevent
+  libgcc
+  libjpeg-turbo
+  libstdc++
+  libtiff
+  libyaml
+  libyuv
+  meson
+  python-jinja
+  python-ply
+  python-pyyaml
+  qt6-base
+  qt6-tools
+  sdl2
+  systemd
+)
+source=(
+  "git+$_url#tag=v$pkgver"
+  "$pkgbase-fix-python3.14-macro-redefinition.patch"
+  "0001-ipa-libipa-add-ov02c10-camera-sensor-helper.patch"
+  "0002-ipa-simple-adjust-read-look-from-tuning.patch"
+  "0003-ipa-libipa-add-ov02e10-camera-sensor-helper.patch"
+)
+sha512sums=('a5656356617a01a7e8feb535380869d38b7c58139c7f99385af355629d3e1927bbd8847f7bec755c753c72f6b065df76de53c15f9af2e5901e83e7a144a2ddcd'
+            '8b54cbdf6ed767ae8d52a14480a4653f4f3a1c2187c4ccf7ceb65eaa60c819cce514122591d6e0c2dfc39d7482739f8fdd4090dbaf63701445510eefc88fb19f'
+            'SKIP'
+            'SKIP'
+            'SKIP')
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+prepare() {
+  cd $pkgbase
+  patch -Np1 < ../$pkgbase-fix-python3.14-macro-redefinition.patch
+  git apply --recount -v ../0001-ipa-libipa-add-ov02c10-camera-sensor-helper.patch
+  # 0001 is hand-written and needs --recount; 0002 has exact counts and --recount breaks it.
+  git apply -v ../0002-ipa-simple-adjust-read-look-from-tuning.patch
+  git apply -v ../0003-ipa-libipa-add-ov02e10-camera-sensor-helper.patch
+
+  # add version, so that utils/gen-version.sh may rely on it
+  printf "%s\n" "$pkgver" > .tarball-version
+}
+
+build() {
+  local meson_options=(
+    -D v4l2=enabled
+    -D tracing=disabled
+    -D documentation=disabled
+    -D gstreamer=disabled
+    -D pycamera=disabled
+    -D test=false
+    # vimc is gated on the test option upstream, and stock ships ipa_vimc.so.
+    # Ask for it by name so test=false does not silently drop it.
+    -D pipelines=auto,vimc
+    # arch-meson's --auto-features=enabled makes the RPi NN AWB's tensorflow-lite
+    # dependency hard; libpisp on ALARM pulls that pipeline in. Not needed.
+    -D rpi-awb-nn=disabled
+  )
+
+  arch-meson $pkgbase build "${meson_options[@]}"
+  meson compile -C build
+}
+
+package_libcamera() {
+  license=(
+    Apache-2.0
+    CC0-1.0
+    'GPL-2.0-only WITH Linux-syscall-note'
+    GPL-2.0-or-later
+    LGPL-2.1-or-later
+    'GPL-2.0-or-later WITH Linux-syscall-note OR BSD-3-Clause'
+    'GPL-2.0-or-later WITH Linux-syscall-note OR MIT'
+  )
+  depends=(
+    glibc
+    gnutls
+    libcamera-ipa
+    libelf
+    libgcc
+    libglvnd
+    libstdc++
+    libunwind
+    libyaml
+    libyuv
+    sh
+    systemd-libs libudev.so
+  )
+  optdepends=(
+    'libcamera-tools: for applications'
+  )
+  provides=(libcamera.so libcamera-base.so)
+
+  meson install -C build --destdir "$pkgdir"
+  install -vDm 644 $pkgbase/LICENSES/{BSD-3-Clause,Linux-syscall-note,MIT}.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
+
+  (
+    cd "$pkgdir"
+    _pick $pkgbase-ipa usr/lib/libcamera/
+    _pick $pkgbase-tools usr/bin/{cam,libcamera-bug-report,lc-compliance,qcam}
+  )
+}
+
+package_libcamera-ipa() {
+  pkgdesc+=" - signed IPA"
+  license=(
+    BSD-2-Clause
+    CC-BY-SA-4.0
+    CC0-1.0
+    GPL-2.0-or-later
+    LGPL-2.1-or-later
+  )
+  depends=(
+    glibc
+    libcamera libcamera.so libcamera-base.so
+    libgcc
+    libstdc++
+  )
+  # stripping requires re-signing of IPA libs, so we do it manually
+  options=(!strip)
+
+  strip $pkgname/usr/lib/libcamera/*{.so,proxy} $pkgname/usr/lib/libcamera/ipa/*.so
+  for _lib in $pkgname/usr/lib/libcamera/*.so $pkgname/usr/lib/libcamera/ipa/*.so; do
+    $pkgbase/src/ipa/ipa-sign.sh "$(find build -type f -iname "*ipa-priv-key.pem")" "$_lib" "$_lib.sign"
+  done
+  mv -v $pkgname/* "$pkgdir"
+  install -vDm 644 $pkgbase/LICENSES/BSD-2-Clause.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_libcamera-tools() {
+  pkgdesc+=" - tools"
+  license=(
+    BSD-2-Clause
+    CC0-1.0
+    GPL-2.0-or-later
+    LGPL-2.1-or-later
+  )
+  depends=(
+    glibc
+    gtest
+    libcamera libcamera.so libcamera-base.so
+    libdrm
+    libevent libevent-2.1.so libevent_pthreads-2.1.so
+    libgcc
+    libjpeg-turbo libjpeg.so
+    libstdc++
+    libtiff libtiff.so
+    libyaml
+    qt6-base
+    sdl2
+  )
+
+  mv -v $pkgname/* "$pkgdir"
+  install -vDm 644 $pkgbase/LICENSES/BSD-2-Clause.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

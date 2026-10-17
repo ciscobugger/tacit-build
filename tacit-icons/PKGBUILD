@@ -1,0 +1,22 @@
+# Tacit: the cursor (painted from the wallpaper's accent by tacit-cursor-paint) and the Quiet folder icons.
+# Tacit's symbol fonts are part of tacit-shell, which loads them.
+pkgname=tacit-icons
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Tacit: cursor and folder icons"
+arch=('any')
+url="https://github.com/ciscobugger/tacit-icons"
+license=('GPL-3.0-or-later')
+depends=('python' 'tela-circle-icon-theme-purple' 'hicolor-icon-theme')
+makedepends=('git')
+source=("git+https://github.com/ciscobugger/tacit-icons.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+package() {
+	cd tacit-icons
+	install -Dm755 paint.py "$pkgdir/usr/bin/tacit-cursor-paint"
+	install -Dm644 dist/cursor/masks.bin "$pkgdir/usr/share/tacit/cursor/masks.bin"
+	install -dm755 "$pkgdir/usr/share/icons"
+	cp -r --no-preserve=ownership dist/icons/Tacit dist/icons/Quiet "$pkgdir/usr/share/icons/"
+	find "$pkgdir/usr/share/icons" -type d -exec chmod 755 {} + -o -type f -exec chmod 644 {} +
+}

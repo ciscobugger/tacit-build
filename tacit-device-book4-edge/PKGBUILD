@@ -1,0 +1,83 @@
+# Tacit on the Samsung Galaxy Book4 Edge 15.6" (NP750XQA, Snapdragon X Plus X1P42100): everything this laptop needs
+# beyond the kernel - USB-C charging, the GPU clock floor, the keyboard, memory (zram, MGLRU, earlyoom), the speakers,
+# microphones and camera, Wi-Fi, and the boot splash's display driver step. Units carry hardware conditions where it
+# matters (the charger runs only on this model).
+pkgname=tacit-device-book4-edge
+pkgver=0.1.0
+pkgrel=2
+pkgdesc="Tacit: Samsung Galaxy Book4 Edge support"
+arch=('aarch64')
+url="https://github.com/ciscobugger/book4-edge-linux"
+license=('GPL-3.0-or-later')
+depends=('tacit-boot' 'i2c-tools' 'earlyoom' 'pipewire' 'wireplumber' 'alsa-ucm-conf' 'libcamera' 'iwd' 'networkmanager' 'systemd')
+makedepends=('cargo' 'git')
+backup=('etc/iwd/main.conf')
+install=tacit-device-book4-edge.install
+source=("port::git+https://github.com/ciscobugger/book4-edge-linux.git#commit=9031cab8f796aeda9943659006b563d3342cf10f"
+        "charge::git+https://github.com/ciscobugger/tacit-book4-charge.git#commit=a2674273afc6bfef827e9bf670f0e0596248b510"
+        "boot::git+https://github.com/ciscobugger/tacit-boot.git#tag=v0.2.0")
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+options=('!lto' '!debug')
+
+prepare() {
+	cd charge
+	cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+	cd charge
+	export CARGO_TARGET_DIR=target
+	export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo --remap-path-prefix=$srcdir=/src"
+	cargo build --frozen --release
+}
+
+package() {
+	local u="$srcdir/port/userspace" lib="$pkgdir/usr/lib" sys="$pkgdir/usr/lib/systemd/system"
+
+	# charging
+	install -Dm755 charge/target/release/book4-charge "$lib/tacit/book4-charge"
+	sed 's|/usr/local/bin/book4-charge|/usr/lib/tacit/book4-charge|' charge/systemd/book4-charge.service \
+		| install -Dm644 /dev/stdin "$sys/book4-charge.service"
+
+	# GPU clock floor, the keyboard that is not a tablet, the modules the desktop needs
+	install -Dm644 -t "$lib/udev/rules.d" "$u/udev/90-book4-gpu-floor.rules" "$u/udev/61-book4-keyboard-not-a-tablet.rules"
+	install -Dm644 -t "$lib/modules-load.d" "$u/modules-load/book4-input.conf" "$u/modules-load/i2c-dev.conf"
+
+	# memory: zram swap, its sysctl, MGLRU, transparent huge pages on request, earlyoom's thresholds and its lists
+	install -Dm755 "$u/memory/zram-swap" "$lib/tacit/zram-swap"
+	sed 's|/usr/local/bin/zram-swap|/usr/lib/tacit/zram-swap|g' "$u/memory/zram-swap.service" | install -Dm644 /dev/stdin "$sys/zram-swap.service"
+	install -Dm644 "$u/memory/99-zram.conf" "$lib/sysctl.d/99-tacit-zram.conf"
+	install -Dm644 "$u/memory/mglru.conf" "$lib/tmpfiles.d/tacit-mglru.conf"
+	install -Dm644 "$u/memory/thp-madvise.conf" "$lib/tmpfiles.d/tacit-thp-madvise.conf"
+	# earlyoom reads /etc/default/earlyoom (its own package's file) after any Environment=: replace the command instead
+	local args; args=$(sed -n 's/^EARLYOOM_ARGS="\(.*\)"$/\1/p' "$u/memory/earlyoom")
+	[ -n "$args" ]
+	printf '[Service]\nExecStart=\nExecStart=/usr/bin/earlyoom %s\n' "$args" | install -Dm644 /dev/stdin "$sys/earlyoom.service.d/tacit-book4.conf"
+
+	# speakers and microphones: the sound card's profiles, EQ and limiter, echo cancelling, the speakers' positions
+	local ucm="$pkgdir/usr/share/alsa/ucm2/conf.d/x1e80100"
+	install -Dm644 -t "$ucm" "$u/audio/ucm2/Samsung-GalaxyBook4Edge.conf" "$u/audio/ucm2/Samsung-GalaxyBook4Edge-HiFi.conf"
+	# the kernel (patch 0006) names the card Samsung-GalaxyBook4Edge on every keyboard; this link is for a kernel
+	# without it, where the long name carries the keyboard variant (the UK one measured)
+	ln -s Samsung-GalaxyBook4Edge.conf "$ucm/SAMSUNGELECTRONICSCO.LTD.-GalaxyBook4Edge-1.0-NP750XQA_KB2UK.conf"
+	install -Dm644 -t "$pkgdir/usr/share/pipewire/pipewire.conf.d" "$u/audio/61-book4-speaker-eq.conf" "$u/audio/62-book4-echo-cancel.conf"
+	install -Dm644 -t "$pkgdir/usr/share/wireplumber/wireplumber.conf.d" "$u/audio/51-book4-speaker-position.conf" "$u/camera/52-book4-hide-raw-camss.conf"
+
+	# camera: the soft ISP on the CPU (on the GPU it starved the exposure loop), the sensor's tuning
+	install -Dm644 "$u/camera/configuration.yaml" "$pkgdir/usr/share/libcamera/configuration.yaml"
+	install -Dm644 "$u/camera/ov02c10.yaml" "$pkgdir/usr/share/libcamera/ipa/simple/ov02c10.yaml"
+
+	# Wi-Fi through iwd
+	install -Dm644 "$u/network/wifi-backend.conf" "$lib/NetworkManager/conf.d/tacit-wifi-backend.conf"
+	install -Dm644 "$u/network/iwd-main.conf" "$pkgdir/etc/iwd/main.conf"
+
+	# the boot splash loads the display driver itself, with the panel dark (tacit-boot's device step)
+	local d="$srcdir/boot/device/book4-edge"
+	install -Dm644 "$d/tacit-msm-gate.conf" "$lib/modprobe.d/tacit-msm-gate.conf"
+	install -Dm644 "$d/tacit-msm-load.service" "$sys/tacit-msm-load.service"
+	install -Dm644 "$d/tacit-bootd.service.d/msm.conf" "$sys/tacit-bootd.service.d/msm.conf"
+	install -Dm644 "$d/tacit-bootd-release.service.d/msm.conf" "$sys/tacit-bootd-release.service.d/msm.conf"
+
+	printf 'enable book4-charge.service\nenable zram-swap.service\nenable tacit-msm-load.service\n' \
+		| install -Dm644 /dev/stdin "$lib/systemd/system-preset/80-tacit-device-book4-edge.preset"
+}

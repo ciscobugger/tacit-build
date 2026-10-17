@@ -1,0 +1,36 @@
+# Tacit: the boot splash - one picture from the first frame to the lock screen.
+pkgname=tacit-boot
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Tacit: boot and shutdown splash"
+arch=('aarch64' 'x86_64')
+url="https://github.com/ciscobugger/tacit-boot"
+license=('GPL-3.0-or-later')
+# The Hyprland plugin is built for one Hyprland version and refused by any other: pin the one it was built against,
+# so Hyprland only moves when this package is rebuilt with it.
+_hyprver=$(pkg-config --modversion hyprland 2>/dev/null)
+depends=('libdrm' 'glib2' 'python' 'python-numpy' 'python-pillow' 'systemd' "hyprland=${_hyprver:-0}")
+makedepends=('git' 'hyprland' 'pixman' 'pkgconf')
+conflicts=('plymouth')
+install=tacit-boot.install
+source=("git+https://github.com/ciscobugger/tacit-boot.git#tag=v$pkgver")
+sha256sums=('SKIP')
+options=('!debug')
+
+build() {
+	cd tacit-boot
+	make
+}
+
+package() {
+	cd tacit-boot
+	install -Dm755 tacit-bootd tacit-boot-ground -t "$pkgdir/usr/lib/tacit/"
+	install -Dm755 tacit-ground.so -t "$pkgdir/usr/lib/tacit/hyprland/"
+	install -Dm644 tacit-bootd.service tacit-bootd-release.service tacit-shutdown.service \
+		-t "$pkgdir/usr/lib/systemd/system/"
+	install -Dm644 sddm.service.d/*.conf -t "$pkgdir/usr/lib/systemd/system/sddm.service.d/"
+	install -Dm644 80-tacit-boot.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
+	install -Dm755 tacit-dusk -t "$pkgdir/usr/lib/tacit/"
+	install -Dm644 tacit-dusk.service -t "$pkgdir/usr/lib/systemd/user/"
+	install -Dm644 80-tacit-boot-user.preset "$pkgdir/usr/lib/systemd/user-preset/80-tacit-boot.preset"
+}

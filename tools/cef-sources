@@ -1,0 +1,24 @@
+#!/bin/bash
+# tools/cef-sources <engine dir> <CEF minimal distribution> <arch> [build name]: tacit-cef's two sources, into tacit-cef/:
+#   tacit-cef-<ver>-<build>-<arch>.tar.zst   the engine as it runs (libcef.so and what goes beside it), as engine/;
+#                                            BOLT's note, which names the build machine's paths, left out
+#   tacit-cef-sdk-<ver>.tar.zst              CEF's headers, wrapper source and CMake files of that release, as sdk/
+# The version is read from the distribution's include/cef_version.h; the build name defaults to the engine folder's.
+set -eu
+engine=$(readlink -f "$1"); dist=$(readlink -f "$2"); arch=$3; build=${4:-$(basename "$engine")}
+here=$(dirname "$(dirname "$(readlink -f "$0")")")/tacit-cef
+ver=$(sed -n 's/^#define CEF_VERSION_MAJOR \([0-9]*\)/\1/p; s/^#define CEF_VERSION_MINOR \([0-9]*\)/\1/p; s/^#define CEF_VERSION_PATCH \([0-9]*\)/\1/p' \
+      "$dist/include/cef_version.h" | paste -sd.)
+[ -f "$engine/libcef.so" ] && [ -f "$engine/icudtl.dat" ] || { echo "cef-sources: $engine is not an engine (libcef.so, icudtl.dat)" >&2; exit 1; }
+[ -n "$ver" ] || { echo "cef-sources: no version in $dist/include/cef_version.h" >&2; exit 1; }
+case "$arch" in aarch64) want=aarch64 ;; x86_64) want=x86-64 ;; *) echo "cef-sources: arch aarch64 or x86_64" >&2; exit 1 ;; esac
+file -L "$engine/libcef.so" | grep -q -- "$want" || { echo "cef-sources: $engine/libcef.so is not $arch" >&2; exit 1; }
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+cp -aL "$engine" "$tmp/engine"
+# BOLT's note holds its command line, the build machine's paths among it; nothing runs from it
+readelf -S "$tmp/engine/libcef.so" | grep -q .note.bolt_info && objcopy --remove-section=.note.bolt_info "$tmp/engine/libcef.so"
+mkdir "$tmp/sdk"
+cp -a "$dist/include" "$dist/libcef_dll" "$dist/cmake" "$dist/CMakeLists.txt" "$dist/LICENSE.txt" "$tmp/sdk/"
+tar -C "$tmp" --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -cf - engine | zstd -q -T0 -9 -o "$here/tacit-cef-$ver-$build-$arch.tar.zst" -f
+tar -C "$tmp" --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -cf - sdk | zstd -q -T0 -9 -o "$here/tacit-cef-sdk-$ver.tar.zst" -f
+ls -la "$here/tacit-cef-$ver-$build-$arch.tar.zst" "$here/tacit-cef-sdk-$ver.tar.zst"

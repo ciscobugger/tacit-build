@@ -1,0 +1,68 @@
+# Tacit: the session - Hyprland and the colour system (matugen) with Tacit's settings as defaults (the person's own in ~/.config/hypr load after them
+# and win), the lock, idle and screen share settings, the "Tacit" session and Tacit's login screen.
+pkgname=tacit-session
+pkgver=0.2.1
+pkgrel=17
+pkgdesc="Tacit: the Hyprland session"
+arch=('any')
+url="https://github.com/ciscobugger/tacit-shell"
+license=('GPL-3.0-or-later')
+depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland' 'swaybg' 'sddm' 'weston' 'python' 'tacit-shell' 'tacit-portal' 'tacit-boot'
+         # the look GTK and Qt apps are given (xdg/), compressed swap (memory/)
+         'adw-gtk-theme' 'kvantum' 'zram-generator'
+         # the terminal as the owner has it (fish/, starship.toml), the keyring and the home folders (the user presets)
+         'fish' 'starship' 'eza' 'ttf-jetbrains-mono-nerd' 'gnome-keyring' 'xdg-user-dirs'
+         # Qt's KDE platform theme (the session sets QT_QPA_PLATFORMTHEME=kde): without it Qt read no icon theme and
+         # every app icon was the missing-icon checker
+         'plasma-integration'
+         # updates without a password for these two actions (updates/50-tacit-updates.rules)
+         'polkit')
+makedepends=('git')
+install=tacit-session.install
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=d80bb6658c87977ab29c3520fd7dd77a4c234ebf")
+sha256sums=('SKIP')
+
+package() {
+	cd tacit-shell/session
+	install -d "$pkgdir/usr/share/tacit/hypr" "$pkgdir/usr/share/tacit/xdg"
+	cp -r --no-preserve=ownership hypr/. "$pkgdir/usr/share/tacit/hypr/"
+	cp -r --no-preserve=ownership xdg/. "$pkgdir/usr/share/tacit/xdg/"
+	install -d "$pkgdir/usr/share/tacit/matugen"
+	cp -r --no-preserve=ownership matugen/. "$pkgdir/usr/share/tacit/matugen/"
+	find "$pkgdir/usr/share/tacit" -type d -exec chmod 755 {} + -o -type f -name '*.sh' -exec chmod 755 {} + -o -type f -exec chmod 644 {} +
+	install -Dm644 wayland-sessions/tacit.desktop -t "$pkgdir/usr/share/wayland-sessions/"
+	install -Dm644 environment.d/50-tacit.conf -t "$pkgdir/usr/lib/environment.d/"
+	# the login screen: Tacit's theme, the root helper that brings in the person's ground and colours, SDDM's settings
+	install -d "$pkgdir/usr/share/sddm/themes"
+	cp -r --no-preserve=ownership sddm/tacit "$pkgdir/usr/share/sddm/themes/tacit"
+	chmod 644 "$pkgdir"/usr/share/sddm/themes/tacit/*.qml "$pkgdir"/usr/share/sddm/themes/tacit/*.desktop "$pkgdir"/usr/share/sddm/themes/tacit/theme.conf
+	install -Dm755 sddm/tacit-login-ground "$pkgdir/usr/lib/tacit/tacit-login-ground"
+	install -Dm644 sddm/sddm.service.d/tacit-login.conf -t "$pkgdir/usr/lib/systemd/system/sddm.service.d/"
+	install -Dm644 sddm/tacit.conf "$pkgdir/usr/lib/sddm/sddm.conf.d/tacit.conf"
+	# Tacit's look for everyone (GTK and Qt read xdg/ above; GSettings, fontconfig here); a person's own settings win
+	install -Dm644 glib/90-tacit.gschema.override -t "$pkgdir/usr/share/glib-2.0/schemas/"
+	install -Dm644 fontconfig/49-tacit-text.conf -t "$pkgdir/usr/share/fontconfig/conf.avail/"
+	install -d "$pkgdir/etc/fonts/conf.d"
+	ln -s /usr/share/fontconfig/conf.avail/49-tacit-text.conf "$pkgdir/etc/fonts/conf.d/49-tacit-text.conf"
+	# compressed swap, as on the Book4 (a file in /etc replaces either)
+	install -Dm644 memory/zram-generator.conf -t "$pkgdir/usr/lib/systemd/"
+	install -Dm644 memory/99-tacit-zram.conf -t "$pkgdir/usr/lib/sysctl.d/"
+	# a restart without the watchdog's kernel line on its black screen
+	install -Dm644 systemd/system.conf.d/50-tacit-quiet-restart.conf -t "$pkgdir/usr/lib/systemd/system.conf.d/"
+	# the terminal: fish's Tacit config, Tacit's prompt
+	install -Dm644 fish/tacit.fish -t "$pkgdir/usr/share/fish/vendor_conf.d/"
+	install -Dm644 starship.toml -t "$pkgdir/usr/share/tacit/"
+	# Tacit's apps for files and links also where the user manager's services look (XDG_DATA_DIRS, environment.d)
+	install -Dm644 xdg/mimeapps.list -t "$pkgdir/usr/share/tacit/applications/"
+	# the terminal named Terminal, and the tools that came with drivers, printing and the look kept out of search: entries
+	# of the same name, found first (Tacit's applications folder leads XDG_DATA_DIRS)
+	install -Dm644 overrides/applications/*.desktop -t "$pkgdir/usr/share/tacit/applications/"
+	# services every person needs; tacit-install applies the presets
+	install -Dm644 systemd/user-preset/80-tacit-session.preset -t "$pkgdir/usr/lib/systemd/user-preset/"
+	# updates: downloaded in the background, installed while the computer restarts, now or tonight, without a password
+	install -Dm755 updates/tacit-fetch-updates updates/tacit-update -t "$pkgdir/usr/lib/tacit/"
+	install -Dm644 updates/tacit-fetch-updates.service updates/tacit-fetch-updates.timer updates/tacit-update@.service \
+		updates/tacit-system-update.service updates/tacit-update-night.timer -t "$pkgdir/usr/lib/systemd/system/"
+	install -Dm644 updates/80-tacit-updates.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
+	install -Dm644 updates/50-tacit-updates.rules -t "$pkgdir/usr/share/polkit-1/rules.d/"
+}

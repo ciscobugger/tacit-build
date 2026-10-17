@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""tools/tacit-key make <out dir>: Tacit's package signing key, its master in Cloud KMS.
+
+pacman checks packages with OpenPGP. The master key (certify only) is Cloud KMS key tacit/packages-master in YOUR-PROJECT
+(RSA 4096, PKCS #1 v1.5 with SHA-512, which is OpenPGP's RSA signature): its private half never leaves KMS, which signs
+the key's certifications through this computer's gcloud login. Packages are signed by a subkey (sign only, two years)
+made here; its private half goes only into <out dir>/tacit-signing-subkey.pgp, next to the master's stub, for gpg.
+Written: tacit.pgp (the public key, for pacman's keyring), tacit-signing-subkey.pgp (secret, mode 600), fingerprint.
+Packets per RFC 4880 (v4 keys, v4 signatures); `gpg --check-sigs` on the result is the proof.
+"""
+import hashlib
+import os
+import struct
+import subprocess
+import sys
+import tempfile
+import time
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+
+KMS = ["--project", "YOUR-PROJECT", "--location", "europe-north1", "--keyring", "tacit", "--key", "packages-master",
+       "--version", "1"]
+UID = b"Tacit packages"
+SUBKEY_LIFE = 2 * 365 * 86400
+
+
+def mpi(i):
+    return struct.pack(">H", i.bit_length()) + i.to_bytes((i.bit_length() + 7) // 8, "big")
+
+
+def packet(tag, body):
+    n = len(body)
+    if n < 192:
+        length = bytes([n])
+    elif n < 8384:
+        length = bytes([((n - 192) >> 8) + 192, (n - 192) & 0xFF])
+    else:
+        length = b"\xff" + struct.pack(">I", n)
+    return bytes([0xC0 | tag]) + length + body
+
+
+def subpacket(kind, data):
+    n = len(data) + 1
+    if n < 192:
+        length = bytes([n])
+    elif n < 16320:
+        length = bytes([((n - 192) >> 8) + 192, (n - 192) & 0xFF])
+    else:
+        length = b"\xff" + struct.pack(">I", n)
+    return length + bytes([kind]) + data
+
+
+def key_body(created, public):
+    numbers = public.public_numbers()
+    return b"\x04" + struct.pack(">I", created) + b"\x01" + mpi(numbers.n) + mpi(numbers.e)
+
+
+def fingerprint(body):
+    return hashlib.sha1(b"\x99" + struct.pack(">H", len(body)) + body).digest()
+
+
+def key_material(body):
+    return b"\x99" + struct.pack(">H", len(body)) + body
+
+
+def signature(sigtype, material, hashed, issuer_fpr, sign):
+    """A v4 signature packet's body: `sign` takes the bytes OpenPGP hashes and returns the RSA signature."""
+    sigdata = bytes([4, sigtype, 1, 10]) + struct.pack(">H", len(hashed)) + hashed   # RSA, SHA-512
+    data = material + sigdata + b"\x04\xff" + struct.pack(">I", len(sigdata))
+    unhashed = subpacket(16, issuer_fpr[-8:])
+    sig = sign(data)
+    return sigdata + struct.pack(">H", len(unhashed)) + unhashed + hashlib.sha512(data).digest()[:2] \
+        + mpi(int.from_bytes(sig, "big"))
+
+
+def kms_sign(data):
+    with tempfile.TemporaryDirectory() as tmp:
+        src, out = os.path.join(tmp, "data"), os.path.join(tmp, "sig")
+        with open(src, "wb") as f:
+            f.write(data)
+        subprocess.run(["gcloud", "kms", "asymmetric-sign", *KMS, "--digest-algorithm", "sha512",
+                        "--input-file", src, "--signature-file", out], check=True, capture_output=True)
+        with open(out, "rb") as f:
+            return f.read()
+
+
+def kms_public():
+    with tempfile.TemporaryDirectory() as tmp:
+        out = os.path.join(tmp, "key.pem")
+        subprocess.run(["gcloud", "kms", "keys", "versions", "get-public-key", "1", *[a for a in KMS if a not in ("--version", "1")],
+                        "--output-file", out], check=True, capture_output=True)
+        with open(out, "rb") as f:
+            return serialization.load_pem_public_key(f.read())
+
+
+def make(out):
+    master = kms_public()
+    now = int(time.time())
+    primary = key_body(now, master)
+    pfpr = fingerprint(primary)
+
+    def master_sign(data):
+        sig = kms_sign(data)
+        master.verify(sig, data, padding.PKCS1v15(), hashes.SHA512())   # KMS signed what was asked, with this key
+        return sig
+
+    # the master: certify only, SHA-512 preferred
+    uid = packet(13, UID)
+    cert = signature(0x13, key_material(primary) + b"\xb4" + struct.pack(">I", len(UID)) + UID,
+                     subpacket(2, struct.pack(">I", now)) + subpacket(27, b"\x01") + subpacket(33, b"\x04" + pfpr)
+                     + subpacket(21, bytes([10, 8])) + subpacket(11, bytes([9, 7])) + subpacket(30, b"\x01"),
+                     pfpr, master_sign)
+
+    # the signing subkey, made here; its binding carries its own back signature (0x19), as signing subkeys must
+    sub = rsa.generate_private_key(public_exponent=65537, key_size=4096)
+    subbody = key_body(now, sub.public_key())
+    sfpr = fingerprint(subbody)
+    both = key_material(primary) + key_material(subbody)
+    back = signature(0x19, both, subpacket(2, struct.pack(">I", now)) + subpacket(33, b"\x04" + sfpr), sfpr,
+                     lambda data: sub.sign(data, padding.PKCS1v15(), hashes.SHA512()))
+    binding = signature(0x18, both,
+                        subpacket(2, struct.pack(">I", now)) + subpacket(27, b"\x02") + subpacket(9, struct.pack(">I", SUBKEY_LIFE))
+                        + subpacket(33, b"\x04" + pfpr) + subpacket(32, back),
+                        pfpr, master_sign)
+
+    public = packet(6, primary) + uid + packet(2, cert) + packet(14, subbody) + packet(2, binding)
+
+    # gpg's secret form: the master as a stub (GnuPG's gnu-dummy S2K: no secret here), the subkey's secret unprotected
+    n = sub.private_numbers()
+    p, q = sorted((n.p, n.q))
+    secret_mpis = mpi(n.d) + mpi(p) + mpi(q) + mpi(pow(p, -1, q))
+    stub = primary + b"\xff\x00\x65\x00GNU\x01"
+    secret = packet(5, stub) + uid + packet(2, cert) \
+        + packet(7, subbody + b"\x00" + secret_mpis + struct.pack(">H", sum(secret_mpis) & 0xFFFF)) + packet(2, binding)
+
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "tacit.pgp"), "wb") as f:
+        f.write(public)
+    path = os.path.join(out, "tacit-signing-subkey.pgp")
+    with open(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "wb") as f:
+        f.write(secret)
+    with open(os.path.join(out, "fingerprint"), "w") as f:
+        f.write(f"master {pfpr.hex().upper()}\nsubkey {sfpr.hex().upper()}\n")
+    print(f"master {pfpr.hex().upper()}\nsubkey {sfpr.hex().upper()}")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3 or sys.argv[1] != "make":
+        sys.exit(__doc__)
+    make(sys.argv[2])

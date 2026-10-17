@@ -1,0 +1,5 @@
+# On by default: the splash only runs on boot entries with `splash` on the kernel command line.
+post_install() {
+	systemctl preset tacit-bootd.service tacit-bootd-release.service tacit-shutdown.service >/dev/null 2>&1 || true
+	systemctl --global preset tacit-dusk.service >/dev/null 2>&1 || true
+}

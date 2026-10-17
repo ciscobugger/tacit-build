@@ -1,0 +1,52 @@
+#!/bin/bash
+# tools/publish-source [version]: Tacit's public source, as clean copies of the private repos (owner, 2026-10-17). Each
+# part's committed code at its HEAD (no history, no uncommitted work) goes into its public repo as one new commit by
+# "Tacit"; a part with no licence gets the GPL-3.0 its packages declare, and one with no README a short one. The cloud
+# project's name is taken out, and nothing is pushed while the owner's own address is in it. The private repos stay the
+# working ones; run this at each release.
+set -eu
+version=${1:-$(date +%Y.%m.%d)}
+me=$(gh api user -q .login)
+email="$(gh api user -q .id)+$me@users.noreply.github.com"
+licence=$HOME/.config/quickshell/tacit/LICENSE
+# in pieces, so this file passes its own check
+owner_mail="xizko""55" project="himilo""-hoy"
+
+publish() {
+    local src=$1 name=$2 desc=$3 readme=$4
+    gh repo view "$me/$name" >/dev/null 2>&1 \
+        || gh repo create "$me/$name" --public --description "$desc" --homepage https://tacitos.co >/dev/null
+    local w
+    w=$(mktemp -d)
+    git clone -q "https://github.com/$me/$name.git" "$w" 2>/dev/null
+    find "$w" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+    git -C "$src" archive HEAD | tar -x -C "$w"
+    [ -e "$w/LICENSE" ] || cp "$licence" "$w/LICENSE"
+    [ -e "$w/README.md" ] || printf '%s\n' "$readme" > "$w/README.md"
+    grep -rlI --null --exclude-dir=.git "$project" "$w" | xargs -0 -r sed -i "s/$project/YOUR-PROJECT/g"
+    if grep -rqI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w"; then
+        echo "publish-source: $name still names the owner's address or cloud project; nothing pushed" >&2
+        grep -rlI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w" >&2
+        exit 1
+    fi
+    git -C "$w" add -A
+    if git -C "$w" diff --cached --quiet 2>/dev/null && git -C "$w" rev-parse -q --verify HEAD >/dev/null; then
+        echo "$name: unchanged"
+    else
+        git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -m "Tacit $version"
+        git -C "$w" branch -M main
+        git -C "$w" push -q -u origin main
+        echo "$name: https://github.com/$me/$name ($(git -C "$w" ls-files | wc -l) files)"
+    fi
+    rm -rf "$w"
+}
+
+publish "$HOME/.config/quickshell/tacit" tacit \
+    "Tacit's desktop and apps: the shell, notch, search, Setup, Settings, Pinax, Graphis, Viewer and Praxis" \
+    "# Tacit"
+publish "$HOME/dev/browser" thyris \
+    "Thyris, Tacit's browser, on Chromium's engine (CEF)" \
+    "$(printf '# Thyris\n\nTacit'"'"'s browser, on Chromium'"'"'s engine (CEF). Part of [Tacit](https://tacitos.co).\n\nLicence: GPL-3.0 (LICENSE).')"
+publish "$HOME/dev/tacit-packages" tacit-build \
+    "How Tacit is built: its Arch packages, the ISO and the installer's test computer" \
+    "# tacit-build"

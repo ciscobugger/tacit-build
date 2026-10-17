@@ -1,0 +1,36 @@
+# Tacit: keeps the desktop's agent sessions running and relays them to Praxis, the notch and the palette.
+pkgname=tacit-agent-host
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Tacit: the agent session host behind Praxis and the notch"
+arch=('aarch64' 'x86_64')
+url="https://github.com/ciscobugger/tacit-agent-host"
+license=('GPL-3.0-or-later')
+depends=('gcc-libs' 'glibc' 'systemd')
+makedepends=('cargo' 'git')
+install=tacit-agent-host.install
+source=("agent-host::git+https://github.com/ciscobugger/tacit-agent-host.git#tag=v$pkgver" "80-tacit-agent-host.preset")
+sha256sums=('SKIP' 'SKIP')
+options=('!lto' '!debug')
+
+prepare() {
+	cd agent-host
+	export RUSTUP_TOOLCHAIN=stable
+	cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+	cd agent-host
+	export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+	# crash messages name the files they come from: name them the same on every build machine
+	export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo --remap-path-prefix=$srcdir=/src"
+	cargo build --frozen --release
+}
+
+package() {
+	cd agent-host
+	install -Dm755 target/release/agent-host "$pkgdir/usr/bin/agent-host"
+	install -Dm644 contrib/systemd/agent-host.service "$pkgdir/usr/lib/systemd/user/agent-host.service"
+	install -Dm644 -t "$pkgdir/usr/lib/systemd/user/agent-host.service.d" contrib/systemd/agent-host.service.d/*.conf
+	install -Dm644 "$srcdir/80-tacit-agent-host.preset" "$pkgdir/usr/lib/systemd/user-preset/80-tacit-agent-host.preset"
+}

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Thyris: the browser on Tacit's engine. CHROME_DESKTOP names its menu entry for Chromium's default-browser setting.
+export CHROME_DESKTOP=thyris.desktop
+exec /usr/lib/tacit/thyris/browser "$@"

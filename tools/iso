@@ -1,0 +1,59 @@
+#!/bin/bash
+# tools/iso: Tacit's x86_64 ISO, made on the cloud machine (cef-build-x64, which must be running; it is left as found)
+# with archiso in a privileged Arch container: archiso's baseline profile, iso/ laid over it, the packages from [tacit]
+# as published (~/.cache/tacit-repo/x86_64, tools/publish), checked against Tacit's key. The ISO stays on the machine
+# (~/tacit-iso/out) for the VM test; its name is printed.
+# The installer (tacit-install) removes the live system's own files from what it copies: every file archiso's profile
+# and iso/ put in the image, less the ones the installed system keeps (KEEP), listed in /usr/share/tacit/live-files.
+set -eu
+here=$(dirname "$(dirname "$(readlink -f "$0")")"); cd "$here"
+at=(--project YOUR-PROJECT --zone europe-west4-a); vm=cef-build-x64
+repo=${TACIT_REPO_MIRROR:-$HOME/.cache/tacit-repo}/x86_64
+[ -f "$repo/tacit.db" ] || { echo "no x86_64 repo in $repo (tools/publish first)" >&2; exit 1; }
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+cat > "$tmp/inside.sh" <<'INSIDE'
+#!/bin/bash
+set -eu
+pacman-key --init >/dev/null 2>&1; pacman-key --populate archlinux >/dev/null 2>&1
+pacman -Syu --noconfirm --needed archiso grub >/dev/null    # grub: the baseline profile's UEFI boot
+# Tacit's key, so the build checks [tacit]'s packages and database
+pacman-key --add /work/tacit.gpg >/dev/null 2>&1
+pacman-key --lsign-key 141AB0375DCEE1F546BCC32294D3C7B496EE6E61 >/dev/null 2>&1
+p=/work/profile
+rm -rf $p; cp -r /usr/share/archiso/configs/baseline $p
+cp -a /work/iso/airootfs/. $p/airootfs/
+grep -v '^#' /work/iso/packages.x86_64 | grep . >> $p/packages.x86_64
+# what the installed system keeps of the image's own files; the rest are the live system's
+KEEP='^(etc/(passwd|shadow|group|gshadow|localtime)|etc/systemd/system/display-manager.service|etc/systemd/system/multi-user.target.wants/(NetworkManager|bluetooth|avahi-daemon).service|etc/systemd/system/sockets.target.wants/cups.socket)$'
+mkdir -p $p/airootfs/usr/share/tacit
+(cd $p/airootfs && find . \( -type f -o -type l \) | sed 's|^\./||' | grep -Ev "$KEEP" | sort) > /tmp/live-files
+echo "usr/share/tacit/live-files" >> /tmp/live-files
+mv /tmp/live-files $p/airootfs/usr/share/tacit/live-files
+sed -i 's/^iso_name=.*/iso_name="tacit"/; s/^iso_label=.*/iso_label="TACIT_$(date +%Y%m)"/; s/^iso_publisher=.*/iso_publisher="Tacit"/; s/^iso_application=.*/iso_application="Tacit live and installer"/' $p/profiledef.sh
+# the stick's boot menu says Tacit, not Arch Linux, and is not shown: the stick starts Tacit at once (Esc or Shift
+# while it starts still opens it, GRUB's hidden style)
+sed -i 's/Arch Linux/Tacit/g' $p/grub/*.cfg $p/efiboot/loader/entries/*.conf $p/syslinux/*.cfg 2>/dev/null || true
+sed -i 's/^set timeout=.*/set timeout=0\nset timeout_style=hidden/' $p/grub/grub.cfg $p/grub/loopback.cfg 2>/dev/null || true
+# a SquashFS image, as tacit-install copies it with unsquashfs (its progress in percent); the baseline makes EROFS
+sed -i "s/^airootfs_image_type=.*/airootfs_image_type='squashfs'/; s/^airootfs_image_tool_options=.*/airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '15' '-b' '1M')/" $p/profiledef.sh
+sed -i 's|^file_permissions=(|file_permissions=(\n  ["/usr/lib/tacit/tacit-live"]="0:0:755"|' $p/profiledef.sh
+# [tacit] first, so its packages win over Arch's of the same name
+awk '/^\[core\]/ && !done { print "[tacit]\nSigLevel = Required DatabaseRequired\nServer = file:///work/repo\n"; done=1 } { print }' $p/pacman.conf > $p/pacman.conf.new
+mv $p/pacman.conf.new $p/pacman.conf
+echo "== live files: $(wc -l < $p/airootfs/usr/share/tacit/live-files)"; cat $p/airootfs/usr/share/tacit/live-files
+rm -rf /tmp/archiso-work
+mkarchiso -v -w /tmp/archiso-work -o /work/out $p > /work/mkarchiso.log 2>&1 && echo "== built" || { echo "== FAILED"; tail -30 /work/mkarchiso.log; }
+ls -la /work/out
+chown -R "$HOSTUID" /work
+INSIDE
+cp -a iso "$tmp/iso"
+cp tacit-keyring/tacit.gpg "$tmp/"
+tar -C "$tmp" -cf "$tmp/iso.tar" iso tacit.gpg inside.sh
+tar -C "$repo" -cf "$tmp/repo.tar" .
+on() { timeout 600 gcloud compute ssh $vm "${at[@]}" --command "$1"; }
+on "sudo rm -rf ~/tacit-iso && mkdir -p ~/tacit-iso/work/repo"
+gcloud compute scp "${at[@]}" "$tmp/iso.tar" "$tmp/repo.tar" $vm:~/tacit-iso/ >/dev/null
+on "cd ~/tacit-iso && tar -xf iso.tar -C work && tar -xf repo.tar -C work/repo \
+    && (setsid nohup bash -c 'sudo docker run --rm --privileged --network=host -e HOSTUID=\$(id -u) -v \$HOME/tacit-iso/work:/work archlinux:latest bash /work/inside.sh > \$HOME/tacit-iso/run.log 2>&1; echo \$? > \$HOME/tacit-iso/done' > /dev/null 2>&1 < /dev/null &)"
+until on "test -f ~/tacit-iso/done" 2>/dev/null; do sleep 60; done
+on "cat ~/tacit-iso/run.log"

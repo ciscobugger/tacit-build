@@ -1,0 +1,20 @@
+# Tacit: installs Tacit (the core, on any computer). A laptop adds its device package (tacit-device-<model>).
+pkgname=tacit
+pkgver=0.1.0
+pkgrel=3
+pkgdesc="Tacit"
+arch=('any')
+url="https://github.com/ciscobugger/tacit-packages"
+license=('GPL-3.0-or-later')
+depends=('tacit-shell' 'tacit-session' 'tacit-agent-host' 'tacit-portal' 'tacit-boot' 'tacit-cpu-policy'
+         'tacit-fonts' 'tacit-icons' 'tacit-foot' 'tacit-qt6-declarative')
+optdepends=('tacit-backup: the nightly encrypted backup'
+            'tacit-thyris: the browser'
+            'tacit-flow: dictation')
+
+package() {
+	# the system's name as Tacit's own apps show it (Settings' About); /etc/os-release stays Arch's (its filesystem
+	# package owns it, and the package tools go by it)
+	install -d "$pkgdir/usr/share/tacit"
+	printf 'NAME="Tacit"\nPRETTY_NAME="Tacit %s"\nVERSION="%s"\n' "$pkgver" "$pkgver" > "$pkgdir/usr/share/tacit/release"
+}

@@ -1,0 +1,4 @@
+# On for every person on the computer: Praxis and the notch expect it.
+post_install() {
+	systemctl --global preset agent-host.service >/dev/null 2>&1 || true
+}

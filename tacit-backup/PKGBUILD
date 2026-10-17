@@ -1,0 +1,21 @@
+# Tacit: the nightly copy of the work in the home folder, encrypted on the computer, to the person's own cloud
+# storage. Off until the person sets it up (the keys never come from a package).
+pkgname=tacit-backup
+pkgver=0.1.1
+pkgrel=1
+pkgdesc="Tacit: nightly encrypted backup of the home folder's work"
+arch=('any')
+url="https://github.com/ciscobugger/tacit-backup"
+license=('GPL-3.0-or-later')
+depends=('bash' 'rclone' 'systemd')
+makedepends=('git')
+source=("git+https://github.com/ciscobugger/tacit-backup.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+package() {
+	cd tacit-backup
+	install -Dm755 tacit-backup "$pkgdir/usr/bin/tacit-backup"
+	install -Dm644 filter.txt "$pkgdir/usr/share/tacit/backup/filter.txt"
+	install -Dm644 tacit-backup.service "$pkgdir/usr/lib/systemd/user/tacit-backup.service"
+	install -Dm644 tacit-backup.timer "$pkgdir/usr/lib/systemd/user/tacit-backup.timer"
+}

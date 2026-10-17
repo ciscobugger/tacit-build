@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""tools/vm: a test computer for Tacit's ISO, on the cloud machine (QEMU with UEFI, a blank 64 GB disk, the ISO as its
+USB stick), driven like a person: its screen as pictures, a mouse and a keyboard. Nothing reaches anyone's desktop.
+Runs on the cloud machine (copied there as ~/tacit-vm/vm):
+  vm start <iso>        a fresh blank disk, the ISO in, powered on (KVM when the machine has it)
+  vm shot <file.png>    the screen now
+  vm click X Y          a left click at screen pixel X,Y (1920x1080); vm move X Y moves only
+  vm type <text>        the text as typed keys (a US keyboard's; --de German, --gb British);   vm key <name> [...]   keys at once (ret, tab, esc, ctrl, alt, ...)
+  vm eject              the USB stick out;        vm insert <iso>     the stick back in
+  vm reset              the power button held and pressed again
+  vm film <dir> <n> <s> n pictures, one every s seconds, into dir (a boot splash, a shutdown); stops early once the
+                        computer is off
+  vm stop               off, disk kept;           vm disk             boots the disk only (no ISO)
+"""
+import json, os, socket, subprocess, sys, time
+
+HOME = os.path.expanduser("~/tacit-vm")
+QMP = f"{HOME}/qmp.sock"
+W, H = 1920, 1080
+
+
+def qmp(cmd, args=None):
+    s = socket.socket(socket.AF_UNIX)
+    s.connect(QMP)
+    f = s.makefile("rw")
+    f.readline()
+    for c in ({"execute": "qmp_capabilities"}, dict({"execute": cmd}, **({"arguments": args} if args else {}))):
+        f.write(json.dumps(c) + "\n"); f.flush()
+        while True:
+            r = json.loads(f.readline())
+            if "return" in r or "error" in r:
+                break
+    s.close()
+    if "error" in r:
+        sys.exit(f"qmp {cmd}: {r['error']}")
+    return r["return"]
+
+
+def boot(iso):
+    os.makedirs(HOME, exist_ok=True)
+    kvm = os.path.exists("/dev/kvm")
+    cmd = ["qemu-system-x86_64", "-machine", "q35" + (",accel=kvm" if kvm else ",accel=tcg"), "-cpu", "host" if kvm else "max",
+           "-smp", "6", "-m", "8192",
+           "-drive", "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd",
+           "-drive", f"if=pflash,format=raw,file={HOME}/vars.fd",
+           # the disk first, as a computer's boot order has the installed system first: a blank one is passed over
+           "-drive", f"id=disk,file={HOME}/disk.qcow2,if=none,format=qcow2", "-device", "virtio-blk-pci,drive=disk,bootindex=0",
+           # VM_VGA=std: QEMU's plain VGA (the bochs driver) instead, for a hibernate test: woken from hibernate, virtio-vga
+           # stayed on the firmware's last picture (2026-10-16)
+           "-device", f"VGA,xres={W},yres={H}" if os.environ.get("VM_VGA") == "std" else f"virtio-vga,xres={W},yres={H}",
+           "-display", "none",
+           "-device", "qemu-xhci", "-device", "usb-tablet", "-device", "usb-kbd",
+           "-netdev", "user,id=n0", "-device", "virtio-net-pci,netdev=n0",
+           "-qmp", f"unix:{QMP},server,nowait", "-serial", f"file:{HOME}/serial.log", "-daemonize", "-pidfile", f"{HOME}/qemu.pid"]
+    if iso:
+        cmd += ["-drive", f"id=stick,file={iso},if=none,media=cdrom,readonly=on", "-device", "ide-cd,drive=stick,id=stickdev,bootindex=1"]
+    subprocess.run(cmd, check=True)
+    print("started", "with KVM" if kvm else "WITHOUT KVM (slow)")
+
+
+def keys(names):
+    qmp("send-key", {"keys": [{"type": "qcode", "data": n} for n in names]})
+
+
+QCODE = {" ": "spc", "\n": "ret", "-": "minus", "=": "equal", ".": "dot", ",": "comma", "/": "slash", ";": "semicolon",
+         "'": "apostrophe", "@": ("shift", "2"), "!": ("shift", "1"), "_": ("shift", "minus"), ":": ("shift", "semicolon"),
+         "[": "bracket_left", "]": "bracket_right", "\\": "backslash", "`": "grave_accent",
+         "#": ("shift", "3"), "$": ("shift", "4"), "%": ("shift", "5"), "^": ("shift", "6"), "&": ("shift", "7"),
+         "*": ("shift", "8"), "(": ("shift", "9"), ")": ("shift", "0"), "+": ("shift", "equal"), "?": ("shift", "slash"),
+         "<": ("shift", "comma"), ">": ("shift", "dot"), "|": ("shift", "backslash"), '"': ("shift", "apostrophe"),
+         "{": ("shift", "bracket_left"), "}": ("shift", "bracket_right"), "~": ("shift", "grave_accent")}
+
+
+# the keys a German keyboard gives these characters with (the letters other than y and z are where a US keyboard has them)
+QCODE_DE = {"y": "z", "z": "y", "Y": ("shift", "z"), "Z": ("shift", "y"), "-": "slash", "_": ("shift", "slash"),
+            "/": ("shift", "7"), "=": ("shift", "0"), ":": ("shift", "dot"), ";": ("shift", "comma"), "?": ("shift", "minus"),
+            "(": ("shift", "8"), ")": ("shift", "9"), "&": ("shift", "6"), "*": ("shift", "bracket_right"),
+            "+": "bracket_right", "#": "backslash", "'": ("shift", "backslash"), '"': ("shift", "2"),
+            "<": "less", ">": ("shift", "less"), "|": ("alt_r", "less"), "@": ("alt_r", "q"), "~": ("alt_r", "bracket_right"),
+            "[": ("alt_r", "8"), "]": ("alt_r", "9"), "{": ("alt_r", "7"), "}": ("alt_r", "0"), "\\": ("alt_r", "minus")}
+
+# a British keyboard's (Setup's default, English (UK)): the US keys give these characters elsewhere
+QCODE_GB = {'"': ("shift", "2"), "@": ("shift", "apostrophe"), "#": "backslash", "~": ("shift", "backslash"),
+            "|": ("shift", "less"), "\\": "less"}
+
+
+def main():
+    a = sys.argv[1:]
+    if not a:
+        sys.exit(__doc__)
+    # the cloud machine's idle switch-off counts a test computer driven in the last hour as work (browser tools/cloud/idle.sh)
+    os.makedirs(HOME, exist_ok=True)
+    open(f"{HOME}/last", "w").close()
+    if a[0] == "start":
+        # VM_KEEP_DISK=1: the disk already there (a prepared one, e.g. with a Windows layout) instead of a blank one
+        if os.environ.get("VM_KEEP_DISK") != "1":
+            subprocess.run(["qemu-img", "create", "-q", "-f", "qcow2", f"{HOME}/disk.qcow2", "64G"], check=True)
+        subprocess.run(["cp", "/usr/share/OVMF/OVMF_VARS_4M.fd", f"{HOME}/vars.fd"], check=True)
+        boot(a[1])
+    elif a[0] == "disk":
+        boot(None)
+    elif a[0] == "shot":
+        qmp("screendump", {"filename": os.path.abspath(a[1]), "format": "png"})
+    elif a[0] in ("click", "move"):
+        x, y = int(a[1]) * 32767 // (W - 1), int(a[2]) * 32767 // (H - 1)
+        qmp("input-send-event", {"events": [{"type": "abs", "data": {"axis": "x", "value": x}},
+                                            {"type": "abs", "data": {"axis": "y", "value": y}}]})
+        if a[0] == "click":
+            time.sleep(0.05)
+            for down in (True, False):
+                qmp("input-send-event", {"events": [{"type": "btn", "data": {"down": down, "button": "left"}}]})
+                time.sleep(0.05)
+    elif a[0] == "type":
+        # --de: the computer types German (y and z swapped, symbols elsewhere): send the keys that give these characters
+        table = QCODE
+        if a[1:2] == ["--de"]:
+            a = a[1:]
+            table = dict(QCODE, **QCODE_DE)
+        elif a[1:2] == ["--gb"]:
+            a = a[1:]
+            table = dict(QCODE, **QCODE_GB)
+        for ch in " ".join(a[1:]):
+            k = table.get(ch)
+            if k is None:
+                k = ("shift", ch.lower()) if ch.isupper() else (ch,)
+            keys(list(k) if isinstance(k, tuple) else [k])
+            time.sleep(0.04)
+    elif a[0] == "key":
+        keys(a[1:])
+    elif a[0] == "eject":
+        qmp("eject", {"id": "stickdev", "force": True})
+    elif a[0] == "film":
+        d, n, every = os.path.abspath(a[1]), int(a[2]), float(a[3])
+        os.makedirs(d, exist_ok=True)
+        for i in range(n):
+            t = time.time()
+            try:
+                qmp("screendump", {"filename": f"{d}/{i:03d}.png", "format": "png"})
+            except (OSError, SystemExit):
+                print(f"off after {i} pictures")
+                break
+            time.sleep(max(0, every - (time.time() - t)))
+    elif a[0] == "insert":
+        qmp("blockdev-change-medium", {"id": "stickdev", "filename": os.path.abspath(a[1]), "format": "raw"})
+    elif a[0] == "reset":
+        qmp("system_reset")
+    elif a[0] == "stop":
+        qmp("quit")
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()

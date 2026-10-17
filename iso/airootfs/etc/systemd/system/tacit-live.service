@@ -1,0 +1,13 @@
+# Tacit's live system only (the installer removes it): the live user, made before the login screen starts.
+[Unit]
+Description=Tacit live user
+Before=display-manager.service
+ConditionPathExists=/run/archiso
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/tacit/tacit-live
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

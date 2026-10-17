@@ -1,0 +1,62 @@
+# Tacit's live system and what the installer copies onto a disk: added to archiso's baseline profile's list.
+# hardware
+linux-firmware
+intel-ucode
+amd-ucode
+sof-firmware
+mesa
+vulkan-intel
+vulkan-radeon
+intel-media-driver
+# the desktop
+tacit
+tacit-thyris
+tacit-keyring
+sddm
+# the keyring the lock opens at login (Thyris keeps passwords in it; it refuses a plain one)
+gnome-keyring
+noto-fonts
+noto-fonts-emoji
+# Chinese, Japanese and Korean text (pages showed boxes without them)
+noto-fonts-cjk
+ttf-dejavu
+hunspell-en_us
+hunspell-en_gb
+networkmanager
+bluez
+bluez-utils
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+sudo
+# what the installer uses
+arch-install-scripts
+squashfs-tools
+gptfdisk
+parted
+dosfstools
+e2fsprogs
+# next to Windows: ntfsresize shrinks it, ntfscat reads whether it is hibernated
+ntfsprogs
+efibootmgr
+# cameras: Tacit's libcamera (sensor helpers stock lacks) and PipeWire's camera plugin; the GTK portal answers the
+# camera permission (xdg-desktop-portal's Access) until Tacit's own portal does
+libcamera
+libcamera-ipa
+pipewire-libcamera
+xdg-desktop-portal-gtk
+# more hardware (2026-10-16): NVIDIA's open driver (Turing and newer; the installer drops it where there is no NVIDIA
+# card), old Broadcom Wi-Fi, printing (CUPS, printers found on the network), firmware updates, Thunderbolt docks,
+# fingerprint readers, the rotation sensor of 2-in-1s
+nvidia-open
+nvidia-utils
+# old Broadcom Wi-Fi: Arch ships the driver as DKMS, built against the kernel's headers when the image is made
+broadcom-wl-dkms
+linux-headers
+cups
+avahi
+fwupd
+bolt
+fprintd
+iio-sensor-proxy

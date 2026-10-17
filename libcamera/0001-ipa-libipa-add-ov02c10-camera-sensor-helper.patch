@@ -1,0 +1,41 @@
+From: Book4 Edge port
+Subject: [PATCH] ipa: libipa: Add CameraSensorHelper for OmniVision OV02C10
+
+The OV02C10 is the front sensor on the Samsung Galaxy Book4 Edge
+(NP750XQA, Snapdragon X Plus), reached over CCI0 i2c0 at 0x36 and fed
+into CAMSS through CSIPHY0.  libcamera has no helper for it, so the
+soft ISP cannot map the sensor's analogue gain code to a real
+multiplier and leaves AGC pinned at the minimum code.
+
+Analogue gain is the usual OmniVision 4-bit fractional format.  From
+drivers/media/i2c/ov02c10.c:
+
+    #define OV02C10_ANAL_GAIN_MIN   0x10    /*  16 -> 1.0x  */
+    #define OV02C10_ANAL_GAIN_MAX   0xf8    /* 248 -> 15.5x */
+
+so code 0x10 is unity and the divisor is 16.
+
+The black level target is programmed by the driver's mode register list
+as 0x4002/0x4003 = 0x0040, i.e. 0x40 at 10 bits, matching the other
+OmniVision helpers.
+
+--- a/src/ipa/libipa/camera_sensor_helper.cpp
++++ b/src/ipa/libipa/camera_sensor_helper.cpp
+@@ -678,6 +678,18 @@
+ REGISTER_CAMERA_SENSOR_HELPER("ov01a10", CameraSensorHelperOv01a10)
+ 
++class CameraSensorHelperOv02c10 : public CameraSensorHelper
++{
++public:
++	CameraSensorHelperOv02c10()
++	{
++		/* From Linux kernel driver: 0x4002/0x4003 = 0x40 at 10bits. */
++		blackLevel_ = 4096;
++		gain_ = AnalogueGainLinear{ 1, 0, 0, 16 };
++	}
++};
++REGISTER_CAMERA_SENSOR_HELPER("ov02c10", CameraSensorHelperOv02c10)
++
+ class CameraSensorHelperOv08x40 : public CameraSensorHelper
+ {
+ public:

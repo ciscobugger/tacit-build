@@ -1,0 +1,20 @@
+# Tacit's updates on (session/updates: the background download, the install while the computer restarts), and a mirror
+# list with a server in it
+post_install() {
+	systemctl preset tacit-fetch-updates.timer tacit-system-update.service >/dev/null 2>&1 || true
+	_mirrors
+}
+post_upgrade() {
+	post_install
+}
+# a list without one server (the package's own has every line commented out) left Arch's repos with none, and nothing
+# could install or update: Arch's worldwide mirrors, as tacit-install writes them
+_mirrors() {
+	local m=/etc/pacman.d/mirrorlist
+	grep -q '^Server' "$m" 2>/dev/null && return
+	if [ "$(uname -m)" = aarch64 ]; then
+		echo 'Server = http://mirror.archlinuxarm.org/$arch/$repo' > "$m"
+	else
+		printf '%s\n' 'Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch' 'Server = https://fastly.mirror.pkgbuild.com/$repo/os/$arch' > "$m"
+	fi
+}

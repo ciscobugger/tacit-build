@@ -1,10 +1,10 @@
-# tacit-packages
+# tacit-build
 
-How every part of Tacit becomes an Arch package. One folder per package: its `PKGBUILD` (built from a tagged
-commit of the part's own repo), install hooks and anything only the package needs. The plan and the rules are in
-`~/book4-edge/tacit-packaging-plan.md`; what goes where is in `tacit-packaging-inventory.md`.
+**How Tacit is made.**
 
-    ./build.sh tacit-cpu-policy      # one package, into out/<arch>/
-    ./build.sh                       # all of them
+Each part of [Tacit](https://tacitos.co) becomes a package here, the packages go to Tacit's update server, and the
+installer you download is built from them. It also holds the test computer every install is tried on before a release.
 
-Nothing here installs anything. Building happens in each folder's src/ and pkg/, which git ignores.
+The details are in [DEVELOPING.md](DEVELOPING.md).
+
+Licence: GPL-3.0

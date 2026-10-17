@@ -9,6 +9,7 @@ version=${1:-$(date +%Y.%m.%d)}
 me=$(gh api user -q .login)
 email="$(gh api user -q .id)+$me@users.noreply.github.com"
 licence=$HOME/.config/quickshell/tacit/LICENSE
+public=$(dirname "$(readlink -f "$0")")/public
 # in pieces, so this file passes its own check
 owner_mail="xizko""55" project="himilo""-hoy"
 
@@ -22,6 +23,13 @@ publish() {
     find "$w" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
     git -C "$src" archive HEAD | tar -x -C "$w"
     [ -e "$w/LICENSE" ] || cp "$licence" "$w/LICENSE"
+    # the public README, written for people rather than developers (tools/public/<name>.md, with its pictures in
+    # tools/public/docs); the part's own README, which is for building it, goes on as DEVELOPING.md
+    if [ -f "$public/$name.md" ]; then
+        [ -e "$w/README.md" ] && mv "$w/README.md" "$w/DEVELOPING.md"
+        cp "$public/$name.md" "$w/README.md"
+        grep -o 'docs/[A-Za-z0-9._-]*' "$w/README.md" | while read -r f; do mkdir -p "$w/docs"; cp "$public/$f" "$w/$f"; done
+    fi
     [ -e "$w/README.md" ] || printf '%s\n' "$readme" > "$w/README.md"
     grep -rlI --null --exclude-dir=.git "$project" "$w" | xargs -0 -r sed -i "s/$project/YOUR-PROJECT/g"
     if grep -rqI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w"; then

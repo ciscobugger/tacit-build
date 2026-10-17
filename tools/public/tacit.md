@@ -1,7 +1,5 @@
 # Tacit
 
-**The computer Linux never had.**
-
 Tacit is a free operating system for laptops and desktops with Intel or AMD chips. Its desktop, apps, browser,
 typefaces and icons are its own and made to fit together. Underneath, it's Arch Linux.
 

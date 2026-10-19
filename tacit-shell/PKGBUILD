@@ -3,7 +3,7 @@
 # and TACIT_BIN to these places and puts /usr/lib/tacit/bin first on PATH.
 pkgname=tacit-shell
 pkgver=0.2.1
-pkgrel=19
+pkgrel=22
 pkgdesc="Tacit: the shell and its apps"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -31,7 +31,7 @@ optdepends=('tesseract: text from a part of the screen'
             'udisks2: drives in Files')
 makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools')
 # the commit the shell's private repo had when this recipe was written; a release names a tag instead
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=5aea0b3a77071527740d0f8e7fb9181256ad5e0c")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=3f394390a1a457e539ee9a8c3ad0e9177dd6e4df")
 sha256sums=('SKIP')
 install=tacit-shell.install
 options=('!debug')

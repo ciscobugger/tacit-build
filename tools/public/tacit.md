@@ -3,7 +3,7 @@
 Tacit is a free operating system for laptops and desktops with Intel or AMD chips. Its desktop, apps, browser,
 typefaces and icons are its own and made to fit together. Underneath, it's Arch Linux.
 
-[Download](https://tacitos.co/install) · [tacitos.co](https://tacitos.co) · [Release notes](https://tacitos.co/release-notes)
+[Download](https://tacitos.co/install) · [tacitos.co](https://tacitos.co) · [Release notes](https://tacitos.co/release-notes) · [Discord](https://discord.gg/Geg72FUhY)
 
 ![Pinax, Tacit's files app](docs/pinax.webp)
 

@@ -13,7 +13,8 @@ repo=${TACIT_REPO_MIRROR:-$HOME/.cache/tacit-repo}/x86_64
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 cat > "$tmp/inside.sh" <<'INSIDE'
 #!/bin/bash
-set -eu
+set -euo pipefail
+trap 'chown -R "$HOSTUID" /work 2>/dev/null || true' EXIT
 pacman-key --init >/dev/null 2>&1; pacman-key --populate archlinux >/dev/null 2>&1
 pacman -Syu --noconfirm --needed archiso grub >/dev/null    # grub: the baseline profile's UEFI boot
 # Tacit's key, so the build checks [tacit]'s packages and database
@@ -30,6 +31,11 @@ mkdir -p $p/airootfs/usr/share/tacit
 echo "usr/share/tacit/live-files" >> /tmp/live-files
 mv /tmp/live-files $p/airootfs/usr/share/tacit/live-files
 sed -i 's/^iso_name=.*/iso_name="tacit"/; s/^iso_label=.*/iso_label="TACIT_$(date +%Y%m)"/; s/^iso_publisher=.*/iso_publisher="Tacit"/; s/^iso_application=.*/iso_application="Tacit live and installer"/' $p/profiledef.sh
+# Pin the supported archiso modes: BIOS hybrid boot and UEFI with an embedded ESP and El Torito image.
+# The baseline wraps the array over two lines (bootmodes=('bios.syslinux'\n 'uefi.grub')), so drop the whole
+# assignment, not just its first line, and add our own.
+sed -i "/^bootmodes=(/,/)/d" "$p/profiledef.sh"
+printf '%s\n' "bootmodes=('bios.syslinux' 'uefi.grub')" >> "$p/profiledef.sh"
 # the stick's boot menu says Tacit, not Arch Linux, and is not shown: the stick starts Tacit at once (Esc or Shift
 # while it starts still opens it, GRUB's hidden style)
 sed -i 's/Arch Linux/Tacit/g' $p/grub/*.cfg $p/efiboot/loader/entries/*.conf $p/syslinux/*.cfg 2>/dev/null || true
@@ -42,9 +48,32 @@ awk '/^\[core\]/ && !done { print "[tacit]\nSigLevel = Required DatabaseRequired
 mv $p/pacman.conf.new $p/pacman.conf
 echo "== live files: $(wc -l < $p/airootfs/usr/share/tacit/live-files)"; cat $p/airootfs/usr/share/tacit/live-files
 rm -rf /tmp/archiso-work
-mkarchiso -v -w /tmp/archiso-work -o /work/out $p > /work/mkarchiso.log 2>&1 && echo "== built" || { echo "== FAILED"; tail -30 /work/mkarchiso.log; }
+if ! mkarchiso -v -w /tmp/archiso-work -o /work/out "$p" > /work/mkarchiso.log 2>&1; then
+    echo "== FAILED"
+    tail -30 /work/mkarchiso.log
+    exit 1
+fi
+echo "== built"
+iso=$(find /work/out -maxdepth 1 -type f -name '*.iso' -print -quit)
+[ -n "$iso" ] || { echo "no ISO was created" >&2; exit 1; }
+echo "== hybrid system area"
+xorriso -indev "$iso" -report_system_area plain | tee /work/system-area.txt
+grep -Eiq 'MBR' /work/system-area.txt || { echo "ISO has no MBR system area" >&2; exit 1; }
+grep -Eiq 'GPT' /work/system-area.txt || { echo "ISO has no GPT system area" >&2; exit 1; }
+echo "== fdisk -l $iso"
+fdisk -l "$iso" | tee /work/fdisk.txt
+grep -Eiq 'EFI System|EFI \(FAT-12/16/32\)' /work/fdisk.txt || {
+    echo "fdisk did not find an EFI System partition in the ISO" >&2
+    exit 1
+}
+efiboot=$(find /tmp/archiso-work -type f -name efiboot.img -print -quit)
+[ -n "$efiboot" ] && [ -s "$efiboot" ] || { echo "mkarchiso did not create efiboot.img" >&2; exit 1; }
+mtype -i "$efiboot" ::/EFI/BOOT/BOOTX64.EFI >/dev/null || {
+    echo "EFI image is missing /EFI/BOOT/BOOTX64.EFI" >&2
+    exit 1
+}
+echo "== verified hybrid ISO, EFI System partition and BOOTX64.EFI"
 ls -la /work/out
-chown -R "$HOSTUID" /work
 INSIDE
 cp -a iso "$tmp/iso"
 cp tacit-keyring/tacit.gpg "$tmp/"
@@ -57,3 +86,8 @@ on "cd ~/tacit-iso && tar -xf iso.tar -C work && tar -xf repo.tar -C work/repo \
     && (setsid nohup bash -c 'sudo docker run --rm --privileged --network=host -e HOSTUID=\$(id -u) -v \$HOME/tacit-iso/work:/work archlinux:latest bash /work/inside.sh > \$HOME/tacit-iso/run.log 2>&1; echo \$? > \$HOME/tacit-iso/done' > /dev/null 2>&1 < /dev/null &)"
 until on "test -f ~/tacit-iso/done" 2>/dev/null; do sleep 60; done
 on "cat ~/tacit-iso/run.log"
+status=$(on "cat ~/tacit-iso/done")
+if [ "$status" != 0 ]; then
+    echo "ISO build container exited with status $status" >&2
+    exit 1
+fi

@@ -2,11 +2,13 @@
 """tools/vm: a test computer for Tacit's ISO, on the cloud machine (QEMU with UEFI, a blank 64 GB disk, the ISO as its
 USB stick), driven like a person: its screen as pictures, a mouse and a keyboard. Nothing reaches anyone's desktop.
 Runs on the cloud machine (copied there as ~/tacit-vm/vm):
-  vm start <iso>        a fresh blank disk, the ISO in, powered on (KVM when the machine has it)
+  vm start <iso>        a fresh blank disk, the ISO as a CD-ROM, powered on (KVM when the machine has it)
+  vm start-usb <iso>    the ISO as a raw USB mass-storage disk (tests byte-for-byte flashed boot)
+  vm start-virtio <iso> the ISO as a raw virtio disk
   vm shot <file.png>    the screen now
   vm click X Y          a left click at screen pixel X,Y (1920x1080); vm move X Y moves only
   vm type <text>        the text as typed keys (a US keyboard's; --de German, --gb British);   vm key <name> [...]   keys at once (ret, tab, esc, ctrl, alt, ...)
-  vm eject              the USB stick out;        vm insert <iso>     the stick back in
+  vm eject              eject the CD-ROM;          vm insert <iso>     replace the CD-ROM image
   vm reset              the power button held and pressed again
   vm film <dir> <n> <s> n pictures, one every s seconds, into dir (a boot splash, a shutdown); stops early once the
                         computer is off
@@ -36,15 +38,18 @@ def qmp(cmd, args=None):
     return r["return"]
 
 
-def boot(iso):
+def boot(iso, transport="cdrom"):
     os.makedirs(HOME, exist_ok=True)
     kvm = os.path.exists("/dev/kvm")
+    # VM_STICK_FIRST=1: the stick before the disk, as a person picks it in the boot menu (a disk with Windows on it would
+    # otherwise start first)
+    stick_first = os.environ.get("VM_STICK_FIRST") == "1" and iso
     cmd = ["qemu-system-x86_64", "-machine", "q35" + (",accel=kvm" if kvm else ",accel=tcg"), "-cpu", "host" if kvm else "max",
            "-smp", "6", "-m", "8192",
            "-drive", "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd",
            "-drive", f"if=pflash,format=raw,file={HOME}/vars.fd",
            # the disk first, as a computer's boot order has the installed system first: a blank one is passed over
-           "-drive", f"id=disk,file={HOME}/disk.qcow2,if=none,format=qcow2", "-device", "virtio-blk-pci,drive=disk,bootindex=0",
+           "-drive", f"id=disk,file={HOME}/disk.qcow2,if=none,format=qcow2", "-device", f"virtio-blk-pci,drive=disk,bootindex={1 if stick_first else 0}",
            # VM_VGA=std: QEMU's plain VGA (the bochs driver) instead, for a hibernate test: woken from hibernate, virtio-vga
            # stayed on the firmware's last picture (2026-10-16)
            "-device", f"VGA,xres={W},yres={H}" if os.environ.get("VM_VGA") == "std" else f"virtio-vga,xres={W},yres={H}",
@@ -53,7 +58,18 @@ def boot(iso):
            "-netdev", "user,id=n0", "-device", "virtio-net-pci,netdev=n0",
            "-qmp", f"unix:{QMP},server,nowait", "-serial", f"file:{HOME}/serial.log", "-daemonize", "-pidfile", f"{HOME}/qemu.pid"]
     if iso:
-        cmd += ["-drive", f"id=stick,file={iso},if=none,media=cdrom,readonly=on", "-device", "ide-cd,drive=stick,id=stickdev,bootindex=1"]
+        bootindex = 0 if stick_first else 1
+        if transport == "cdrom":
+            cmd += ["-drive", f"id=stick,file={iso},if=none,media=cdrom,readonly=on",
+                    "-device", f"ide-cd,drive=stick,id=stickdev,bootindex={bootindex}"]
+        elif transport == "usb":
+            cmd += ["-drive", f"id=stick,file={iso},if=none,format=raw,readonly=on",
+                    "-device", f"usb-storage,drive=stick,id=stickdev,bootindex={bootindex}"]
+        elif transport == "virtio":
+            cmd += ["-drive", f"id=stick,file={iso},if=none,format=raw,readonly=on",
+                    "-device", f"virtio-blk-pci,drive=stick,bootindex={bootindex}"]
+        else:
+            raise ValueError(f"unknown ISO transport: {transport}")
     subprocess.run(cmd, check=True)
     print("started", "with KVM" if kvm else "WITHOUT KVM (slow)")
 
@@ -91,12 +107,13 @@ def main():
     # the cloud machine's idle switch-off counts a test computer driven in the last hour as work (browser tools/cloud/idle.sh)
     os.makedirs(HOME, exist_ok=True)
     open(f"{HOME}/last", "w").close()
-    if a[0] == "start":
+    if a[0] in ("start", "start-usb", "start-virtio"):
         # VM_KEEP_DISK=1: the disk already there (a prepared one, e.g. with a Windows layout) instead of a blank one
         if os.environ.get("VM_KEEP_DISK") != "1":
             subprocess.run(["qemu-img", "create", "-q", "-f", "qcow2", f"{HOME}/disk.qcow2", "64G"], check=True)
         subprocess.run(["cp", "/usr/share/OVMF/OVMF_VARS_4M.fd", f"{HOME}/vars.fd"], check=True)
-        boot(a[1])
+        transport = {"start": "cdrom", "start-usb": "usb", "start-virtio": "virtio"}[a[0]]
+        boot(a[1], transport)
     elif a[0] == "disk":
         boot(None)
     elif a[0] == "shot":

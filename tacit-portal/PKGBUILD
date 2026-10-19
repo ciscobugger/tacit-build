@@ -2,7 +2,7 @@
 # picker as Tacit sheets. The sheets themselves are part of tacit-shell.
 pkgname=tacit-portal
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Tacit: file dialogs, Open with, keyring prompt and share picker"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-portal"
@@ -25,7 +25,10 @@ package() {
 	install -Dm755 build/tacit-portal "$pkgdir/usr/lib/tacit-portal/tacit-portal"
 	install -Dm644 packaging/org.freedesktop.impl.portal.desktop.tacit.service -t "$pkgdir/usr/share/dbus-1/services/"
 	install -Dm644 install/tacit.portal -t "$pkgdir/usr/share/xdg-desktop-portal/portals/"
-	install -Dm644 packaging/tacit-portals.conf -t "$pkgdir/usr/share/xdg-desktop-portal/"
+	# FileChooser and Open with through Tacit's portal: xdg-desktop-portal reads <desktop>-portals.conf from
+	# XDG_CONFIG_DIRS (the session puts /usr/share/tacit/xdg first) and there overrides the stock hyprland-portals.conf
+	install -Dm644 install/hyprland-portals.conf "$pkgdir/usr/share/tacit/xdg/xdg-desktop-portal/hyprland-portals.conf"
+	install -Dm644 install/hyprland-portals.conf "$pkgdir/usr/share/tacit/xdg/xdg-desktop-portal/tacit-portals.conf"
 	install -Dm755 keyring-prompter/tacit-keyring-prompter -t "$pkgdir/usr/bin/"
 	install -Dm644 packaging/org.gnome.keyring.SystemPrompter.service packaging/org.gnome.keyring.PrivatePrompter.service \
 		-t "$pkgdir/usr/share/tacit/dbus-1/services/"

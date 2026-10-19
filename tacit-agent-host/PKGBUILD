@@ -1,6 +1,6 @@
 # Tacit: keeps the desktop's agent sessions running and relays them to Praxis, the notch and the palette.
 pkgname=tacit-agent-host
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Tacit: the agent session host behind Praxis and the notch"
 arch=('aarch64' 'x86_64')

@@ -1,13 +1,16 @@
 # Tacit: installs Tacit (the core, on any computer). A laptop adds its device package (tacit-device-<model>).
 pkgname=tacit
-pkgver=0.1.0
-pkgrel=3
+pkgver=1.0.1
+pkgrel=5
 pkgdesc="Tacit"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-packages"
 license=('GPL-3.0-or-later')
-depends=('tacit-shell' 'tacit-session' 'tacit-agent-host' 'tacit-portal' 'tacit-boot' 'tacit-cpu-policy'
+# the release's own parts at least this new, so an update to this Tacit brings them (its notes say what they fix)
+depends=('tacit-shell>=0.2.1-29' 'tacit-session>=0.2.1-21' 'tacit-agent-host' 'tacit-portal' 'tacit-boot' 'tacit-cpu-policy'
          'tacit-fonts' 'tacit-icons' 'tacit-foot' 'tacit-qt6-declarative')
+source=('notes.json')
+sha256sums=('SKIP')
 optdepends=('tacit-backup: the nightly encrypted backup'
             'tacit-thyris: the browser'
             'tacit-flow: dictation')
@@ -17,4 +20,7 @@ package() {
 	# package owns it, and the package tools go by it)
 	install -d "$pkgdir/usr/share/tacit"
 	printf 'NAME="Tacit"\nPRETTY_NAME="Tacit %s"\nVERSION="%s"\n' "$pkgver" "$pkgver" > "$pkgdir/usr/share/tacit/release"
+	# what changed in each release, in plain words: Settings shows the one waiting (read out of the downloaded package
+	# before the restart) and this one after it, and the notch's "Updated to Tacit …" opens them
+	install -Dm644 "$srcdir/notes.json" "$pkgdir/usr/share/tacit/notes.json"
 }

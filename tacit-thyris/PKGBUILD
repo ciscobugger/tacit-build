@@ -2,7 +2,7 @@
 # tacit-cef-sdk; the binaries find the engine in /usr/lib/tacit/cef (their run path), and it finds them beside itself.
 pkgname=tacit-thyris
 pkgver=0.1.4
-pkgrel=4
+pkgrel=8
 _cef=154.0.34
 pkgdesc="Tacit: Thyris, the web browser"
 arch=('aarch64' 'x86_64')
@@ -11,11 +11,12 @@ license=('GPL-3.0-or-later')
 # qt6-webengine for Qt PDF (the PDF viewer) and qwebengine_convert_dict (spell check's dictionaries); no Qt WebEngine
 # page is made
 depends=("tacit-cef=$_cef" 'qt6-base' 'qt6-declarative' 'qt6-webchannel' 'qt6-websockets' 'qt6-webengine' 'qt6-svg'
-         'qt6-imageformats' 'libcups' 'sqlite' 'openssl' 'libglvnd' 'libxkbcommon' 'hicolor-icon-theme')
+         'qt6-imageformats' 'libcups' 'sqlite' 'openssl' 'libglvnd' 'libxkbcommon' 'hicolor-icon-theme'
+         'curl' 'python')
 optdepends=('hunspell-en_gb: spell check in British English'
             'hunspell-en_us: spell check in American English')
 makedepends=("tacit-cef-sdk=$_cef" 'cmake' 'ninja' 'git' 'rust' 'qt6-shadertools' 'patchelf')
-source=("git+https://github.com/ciscobugger/tacit-opsis.git#commit=82914016bce8de325b05d79ee912dac2c0a03b7f"
+source=("git+https://github.com/ciscobugger/tacit-opsis.git#commit=dcfbbf39d5debfbc16ab349711ac4d85ad302f29"
         'thyris' 'thyris.desktop')
 sha256sums=('SKIP' 'SKIP' 'SKIP')
 options=('!debug')
@@ -37,6 +38,8 @@ build() {
 package() {
 	install -Dm755 build/browser build/browser-page -t "$pkgdir/usr/lib/tacit/thyris/"
 	patchelf --set-rpath /usr/lib/tacit/cef "$pkgdir/usr/lib/tacit/thyris/browser" "$pkgdir/usr/lib/tacit/thyris/browser-page"
+	# uBlock Origin Lite, fetched by the thyris wrapper at the first start and weekly after (curl, python)
+	install -Dm755 tacit-opsis/tools/update-ubol -t "$pkgdir/usr/lib/tacit/thyris/"
 	install -Dm755 thyris -t "$pkgdir/usr/bin/"
 	install -Dm644 thyris.desktop -t "$pkgdir/usr/share/applications/"
 }

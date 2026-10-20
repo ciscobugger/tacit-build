@@ -1,4 +1,31 @@
 #!/bin/sh
 # Thyris: the browser on Tacit's engine. CHROME_DESKTOP names its menu entry for Chromium's default-browser setting.
 export CHROME_DESKTOP=thyris.desktop
-exec /usr/lib/tacit/thyris/browser "$@"
+lib=/usr/lib/tacit/thyris
+# Ads are blocked by uBlock Origin Lite, which the browser loads at start from its own data (src/main.cpp) and
+# update-ubol fetches. The browser's data is ~/.local/share/opsis-cef; a browser running on it holds this lock, its pid
+# on the first line (src/instance.cpp).
+data=${XDG_DATA_HOME:-$HOME/.local/share}/opsis-cef
+ext=$data/browser/extensions
+profile=$(printf %s "$data/browser" | sha1sum | cut -c1-12)
+pid=$(head -n1 "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/browser-$profile.sock.lock" 2>/dev/null)
+if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
+    # a copy fetched while a browser ran goes in before Chromium reads the extension
+    if [ -f "$ext/ubol.next/manifest.json" ]; then
+        rm -rf "$ext/ubol"
+        mv "$ext/ubol.next" "$ext/ubol"
+    fi
+    # the first start fetches it before the window opens, so the first page is blocked; offline it starts without, and
+    # the next start tries again
+    [ -f "$ext/ubol/manifest.json" ] || XDG_DATA_HOME=$data timeout 20 "$lib/update-ubol" >/dev/null 2>&1
+fi
+# A week on, a new copy is fetched beside it in the background and goes in at a start with no browser running. The
+# folder made first keeps two starts from fetching at once; one left by a cut-off fetch is cleared after an hour.
+fetch=$ext/.fetch
+find "$fetch" -maxdepth 0 -mmin +60 -exec rm -rf {} + 2>/dev/null
+if [ -n "$(find "$ext/ubol/manifest.json" -mtime +6 2>/dev/null)" ] && [ ! -d "$ext/ubol.next" ] && mkdir "$fetch" 2>/dev/null; then
+    # forked twice so that it is not left a child of the browser this shell becomes
+    ( (XDG_DATA_HOME=$fetch timeout 120 "$lib/update-ubol" >/dev/null 2>&1 && mv "$fetch/browser/extensions/ubol" "$ext/ubol.next"
+       rm -rf "$fetch") & )
+fi
+exec "$lib/browser" "$@"

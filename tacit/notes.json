@@ -1,0 +1,19 @@
+{
+  "releases": [
+    {
+      "version": "1.0.1",
+      "date": "2026-10-20",
+      "changes": [
+        "Copy and paste works between Thyris and every other app, both ways, pictures included.",
+        "Pages in Thyris can take files again, and sign-ins open in the notch.",
+        "Pages in Thyris no longer stay stretched after a window opens beside them or Thyris is resized.",
+        "Night light, screen recording, a desktop monitor's brightness and USB drives in Files work on every computer.",
+        "The keyboard and touchpad no longer stop answering, and the brightness keys change the screen again.",
+        "The emoji picker shows its emoji, in colour.",
+        "Thyris blocks ads with uBlock Origin Lite on every computer.",
+        "Updates show how far they are, and what changed in them.",
+        "Setup puts Tacit in the computer's start-up menu when it installs next to Windows."
+      ]
+    }
+  ]
+}

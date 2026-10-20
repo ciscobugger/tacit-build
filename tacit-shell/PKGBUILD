@@ -3,7 +3,7 @@
 # and TACIT_BIN to these places and puts /usr/lib/tacit/bin first on PATH.
 pkgname=tacit-shell
 pkgver=0.2.1
-pkgrel=24
+pkgrel=29
 pkgdesc="Tacit: the shell and its apps"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -11,27 +11,21 @@ license=('GPL-3.0-or-later')
 depends=('quickshell' 'qt6-declarative' 'qt6-5compat' 'qt6-positioning' 'syntax-highlighting' 'kirigami'
          'hyprland' 'hyprlock' 'jq' 'libnotify' 'wl-clipboard' 'grim' 'python' 'matugen' 'brightnessctl'
          'networkmanager' 'bluez-utils' 'wireplumber' 'cliphist' 'foot' 'xdg-utils' 'glib2' 'git' 'curl'
-         'ripgrep' 'fd' 'imagemagick' 'ffmpeg' 'tacit-fonts' 'tacit-icons'
+         'ripgrep' 'fd' 'imagemagick' 'ffmpeg' 'tacit-fonts' 'tacit-icons' 'noto-fonts-emoji'
          # Apps' sandbox (scripts/store/bundle.py)
          'bubblewrap' 'xdg-dbus-proxy' 'xdg-user-dirs' 'desktop-file-utils'
          # Apps' catalogue: names, words, icons and screenshot links (without it the store showed bare package names)
          'archlinux-appstream-data'
          # the colour helpers' environment (below) uses these from the system
          'python-gobject' 'python-dbus')
-optdepends=('tesseract: text from a part of the screen'
-            'swappy: drawing on a screenshot'
-            'wf-recorder: recording the screen'
-            'hyprpicker: picking a colour from the screen'
-            'ydotool: Praxis typing into other windows'
-            'github-cli: pull requests in the notch'
-            'ddcutil: brightness of an external monitor'
-            'hyprsunset: night light'
-            'easyeffects: the equaliser'
-            'cava: the audio bars'
-            'udisks2: drives in Files')
+# what the shell's parts run, as on the owner's machine: optional until 2026-10-20, so no install had them and night
+# light, screen recording, a desktop monitor's brightness and drives in Files did nothing (reported on Discord)
+depends+=('tesseract' 'tesseract-data-eng' 'swappy' 'wf-recorder' 'hyprpicker' 'github-cli' 'ddcutil' 'hyprsunset' 'cava' 'udisks2')
+optdepends=('ydotool: Praxis typing into other windows (with ydotoold running and access to /dev/uinput)'
+            'easyeffects: the equaliser')
 makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools')
 # the commit the shell's private repo had when this recipe was written; a release names a tag instead
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=c2ddff2e46369eef99588e94510e8745ed5d63a2")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=f4bd091dc5402d57832c07b89ee06705a090368d")
 sha256sums=('SKIP')
 install=tacit-shell.install
 options=('!debug')

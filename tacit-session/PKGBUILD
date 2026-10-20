@@ -2,7 +2,7 @@
 # and win), the lock, idle and screen share settings, the "Tacit" session and Tacit's login screen.
 pkgname=tacit-session
 pkgver=0.2.1
-pkgrel=19
+pkgrel=21
 pkgdesc="Tacit: the Hyprland session"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -19,7 +19,7 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
          'polkit')
 makedepends=('git')
 install=tacit-session.install
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=6f51ee584c6759179ae7cac9a1f1f07aa3614309")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=4d8416eb57917d197e06171078b7c600d0c11624")
 sha256sums=('SKIP')
 
 package() {
@@ -61,7 +61,7 @@ package() {
 	install -Dm644 systemd/user-preset/80-tacit-session.preset -t "$pkgdir/usr/lib/systemd/user-preset/"
 	# updates: downloaded in the background, installed while the computer restarts, now or tonight, without a password
 	install -Dm755 updates/tacit-fetch-updates updates/tacit-update -t "$pkgdir/usr/lib/tacit/"
-	install -Dm644 updates/tacit-fetch-updates.service updates/tacit-fetch-updates.timer updates/tacit-update@.service \
+	install -Dm644 updates/tacit-fetch-updates.service updates/tacit-fetch-updates-now.service updates/tacit-fetch-updates.timer updates/tacit-update@.service \
 		updates/tacit-system-update.service updates/tacit-update-night.timer -t "$pkgdir/usr/lib/systemd/system/"
 	install -Dm644 updates/80-tacit-updates.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
 	install -Dm644 updates/50-tacit-updates.rules -t "$pkgdir/usr/share/polkit-1/rules.d/"

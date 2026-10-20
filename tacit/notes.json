@@ -6,6 +6,7 @@
       "changes": [
         "Restart installs the update even when it was pressed while the update was still downloading.",
         "fastfetch and other system tools call the system Tacit instead of Arch Linux.",
+        "Signing in to Codex, ChatGPT or Claude from Praxis opens the browser.",
         "Sign-ins opened from other apps show inside the notch, no longer as a separate window next to an empty notch.",
         "The wallpaper is sharp unless you blur it with the new switch in Settings > Wallpaper.",
         "The see-through choice in Settings > Appearance changes the apps' windows.",

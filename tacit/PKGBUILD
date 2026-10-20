@@ -1,13 +1,13 @@
 # Tacit: installs Tacit (the core, on any computer). A laptop adds its device package (tacit-device-<model>).
 pkgname=tacit
 pkgver=1.0.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Tacit"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-packages"
 license=('GPL-3.0-or-later')
 # the release's own parts at least this new, so an update to this Tacit brings them (its notes say what they fix)
-depends=('tacit-shell>=0.2.1-29' 'tacit-session>=0.2.1-22' 'tacit-agent-host' 'tacit-portal' 'tacit-boot' 'tacit-cpu-policy'
+depends=('tacit-shell>=0.2.1-30' 'tacit-session>=0.2.1-23' 'tacit-agent-host' 'tacit-portal' 'tacit-boot' 'tacit-cpu-policy'
          'tacit-fonts' 'tacit-icons' 'tacit-foot' 'tacit-qt6-declarative')
 source=('notes.json')
 sha256sums=('SKIP')

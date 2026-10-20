@@ -5,7 +5,12 @@
       "date": "2026-10-21",
       "changes": [
         "Restart installs the update even when it was pressed while the update was still downloading.",
-        "fastfetch and other system tools call the system Tacit instead of Arch Linux."
+        "fastfetch and other system tools call the system Tacit instead of Arch Linux.",
+        "Sign-ins opened from other apps show inside the notch, no longer as a separate window next to an empty notch.",
+        "The wallpaper is sharp unless you blur it with the new switch in Settings > Wallpaper.",
+        "The see-through choice in Settings > Appearance changes the apps' windows.",
+        "Clicking a notification brings its app forward, or opens it.",
+        "On computers with NVIDIA graphics, Tacit turns on NVIDIA's own sleep and wake services."
       ]
     },
     {

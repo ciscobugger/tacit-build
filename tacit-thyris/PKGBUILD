@@ -2,7 +2,7 @@
 # tacit-cef-sdk; the binaries find the engine in /usr/lib/tacit/cef (their run path), and it finds them beside itself.
 pkgname=tacit-thyris
 pkgver=0.1.4
-pkgrel=8
+pkgrel=9
 _cef=154.0.34
 pkgdesc="Tacit: Thyris, the web browser"
 arch=('aarch64' 'x86_64')
@@ -42,4 +42,7 @@ package() {
 	install -Dm755 tacit-opsis/tools/update-ubol -t "$pkgdir/usr/lib/tacit/thyris/"
 	install -Dm755 thyris -t "$pkgdir/usr/bin/"
 	install -Dm644 thyris.desktop -t "$pkgdir/usr/share/applications/"
+	# the notch's sign-in page: floated into the hole the shell leaves for it (the session loads tacit/browser.lua if present);
+	# without these rules it tiled as a bare window and the notch stayed empty
+	install -Dm644 tacit-opsis/hypr/browser.lua "$pkgdir/usr/share/tacit/hypr/tacit/browser.lua"
 }

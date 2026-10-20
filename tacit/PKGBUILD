@@ -1,7 +1,7 @@
 # Tacit: installs Tacit (the core, on any computer). A laptop adds its device package (tacit-device-<model>).
 pkgname=tacit
 pkgver=1.0.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Tacit"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-packages"
@@ -16,10 +16,48 @@ optdepends=('tacit-backup: the nightly encrypted backup'
             'tacit-flow: dictation')
 
 package() {
-	# the system's name as Tacit's own apps show it (Settings' About); /etc/os-release stays Arch's (its filesystem
-	# package owns it, and the package tools go by it)
+	# the system's name as Tacit's own apps show it (Settings' About)
 	install -d "$pkgdir/usr/share/tacit"
 	printf 'NAME="Tacit"\nPRETTY_NAME="Tacit %s"\nVERSION="%s"\n' "$pkgver" "$pkgver" > "$pkgdir/usr/share/tacit/release"
+	# and as everything else reads it (fastfetch, systemd, hostnamectl): /etc/os-release, a link Arch's filesystem package
+	# owns, points at this one; ID_LIKE=arch keeps what goes by "an Arch system" working. Arch's own stays at
+	# /usr/lib/os-release; the hooks point the link here after filesystem or tacit change, and back if tacit goes
+	install -d "$pkgdir/usr/lib/tacit" "$pkgdir/usr/share/libalpm/hooks"
+	cat > "$pkgdir/usr/lib/tacit/os-release" <<OS
+NAME="Tacit"
+PRETTY_NAME="Tacit $pkgver"
+ID=tacit
+ID_LIKE=arch
+VERSION="$pkgver"
+VERSION_ID=$pkgver
+HOME_URL="https://tacitos.co/"
+BUG_REPORT_URL="https://github.com/ciscobugger/tacit/issues"
+PRIVACY_POLICY_URL="https://tacitos.co/privacy"
+OS
+	cat > "$pkgdir/usr/share/libalpm/hooks/tacit-os-release.hook" <<'HOOK'
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Target = filesystem
+Target = tacit
+
+[Action]
+Description = Naming the system Tacit...
+When = PostTransaction
+Exec = /usr/bin/ln -sfn ../usr/lib/tacit/os-release /etc/os-release
+HOOK
+	cat > "$pkgdir/usr/share/libalpm/hooks/tacit-os-release-remove.hook" <<'HOOK'
+[Trigger]
+Type = Package
+Operation = Remove
+Target = tacit
+
+[Action]
+Description = Giving the system its Arch name back...
+When = PreTransaction
+Exec = /usr/bin/ln -sfn ../usr/lib/os-release /etc/os-release
+HOOK
 	# what changed in each release, in plain words: Settings shows the one waiting (read out of the downloaded package
 	# before the restart) and this one after it, and the notch's "Updated to Tacit …" opens them
 	install -Dm644 "$srcdir/notes.json" "$pkgdir/usr/share/tacit/notes.json"

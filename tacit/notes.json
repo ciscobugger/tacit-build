@@ -4,7 +4,8 @@
       "version": "1.0.2",
       "date": "2026-10-21",
       "changes": [
-        "Restart installs the update even when it was pressed while the update was still downloading."
+        "Restart installs the update even when it was pressed while the update was still downloading.",
+        "fastfetch and other system tools call the system Tacit instead of Arch Linux."
       ]
     },
     {

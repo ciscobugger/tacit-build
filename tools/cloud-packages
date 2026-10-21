@@ -20,10 +20,13 @@ tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 mkdir -p out/x86_64
 cat > "$tmp/inside.sh" <<'INSIDE'
 #!/bin/bash
-# in the container: the repos' current Arch, then each recipe as an ordinary user, its needs installed first
+# in the container: Arch as Tacit ships it (ARCH_MIRROR, the day Tacit's computers update to), then each recipe as an
+# ordinary user, its needs installed first. Built against today's Arch, a package could need a library newer than the
+# installs have; -uu takes the image back to that day where it is newer.
 set -eu
+echo "Server = ${ARCH_MIRROR:-https://mirror.tacitos.co/\$repo/os/\$arch}" > /etc/pacman.d/mirrorlist
 pacman-key --init >/dev/null 2>&1; pacman-key --populate archlinux >/dev/null 2>&1
-pacman -Syu --noconfirm --needed base-devel git cmake ninja meson python >/dev/null
+pacman -Syuu --noconfirm --needed base-devel git cmake ninja meson python >/dev/null
 useradd -m builder 2>/dev/null || true
 mkdir -p /work/new; chown builder /work/new
 for p in "$@"; do
@@ -61,7 +64,7 @@ on "sudo rm -rf ~/tacit-x86 && mkdir -p ~/tacit-x86/work/have"
 gcloud compute scp "${at[@]}" "$tmp/recipes.tar" "$tmp/inside.sh" $have $vm:~/tacit-x86/ >/dev/null
 # the build runs on there by itself (an hour for Qt Declarative); this side looks every minute
 on "cd ~/tacit-x86 && tar -xf recipes.tar -C work && mv inside.sh work/ && { mv tacit-*.pkg.tar.zst work/have/ 2>/dev/null || true; } \
-    && (setsid nohup bash -c 'sudo docker run --rm --network=host --cpus=${CPUS:-8} -e HOSTUID=\$(id -u) -v \$HOME/tacit-x86/work:/work archlinux:latest bash /work/inside.sh $* > \$HOME/tacit-x86/run.log 2>&1; echo \$? > \$HOME/tacit-x86/done' > /dev/null 2>&1 < /dev/null &)"
+    && (setsid nohup bash -c 'sudo docker run --rm --network=host --cpus=${CPUS:-8} -e HOSTUID=\$(id -u) -e ARCH_MIRROR=${ARCH_MIRROR:-} -v \$HOME/tacit-x86/work:/work archlinux:latest bash /work/inside.sh $* > \$HOME/tacit-x86/run.log 2>&1; echo \$? > \$HOME/tacit-x86/done' > /dev/null 2>&1 < /dev/null &)"
 until on "test -f ~/tacit-x86/done" 2>/dev/null; do sleep 60; done
 on "cat ~/tacit-x86/run.log"
 on "cd ~/tacit-x86/work/new && tar -cf ../new.tar *.pkg.tar.zst *.log 2>/dev/null; true"

@@ -1,6 +1,9 @@
 #!/bin/sh
 # Thyris: the browser on Tacit's engine. CHROME_DESKTOP names its menu entry for Chromium's default-browser setting.
 export CHROME_DESKTOP=thyris.desktop
+# the engine picks Wayland by the session type: a launcher without it (a service, an agent's sign-in) had a display and
+# a browser that never came up
+[ -n "$WAYLAND_DISPLAY" ] && [ -z "$XDG_SESSION_TYPE" ] && export XDG_SESSION_TYPE=wayland
 lib=/usr/lib/tacit/thyris
 # Ads are blocked by uBlock Origin Lite, which the browser loads at start from its own data (src/main.cpp) and
 # update-ubol fetches. The browser's data is ~/.local/share/opsis-cef; a browser running on it holds this lock, its pid

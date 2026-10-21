@@ -1,8 +1,8 @@
 # Tacit: the desktop portal - file dialogs and Open with through Files, the keyring prompt and the screen share
 # picker as Tacit sheets. The sheets themselves are part of tacit-shell.
 pkgname=tacit-portal
-pkgver=0.1.0
-pkgrel=2
+pkgver=0.1.1
+pkgrel=1
 pkgdesc="Tacit: file dialogs, Open with, keyring prompt and share picker"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-portal"

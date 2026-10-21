@@ -64,6 +64,8 @@ package() {
 	install -Dm644 updates/tacit-fetch-updates.service updates/tacit-fetch-updates-now.service updates/tacit-fetch-updates.timer updates/tacit-update@.service \
 		updates/tacit-system-update.service updates/tacit-update-night.timer -t "$pkgdir/usr/lib/systemd/system/"
 	install -Dm644 updates/80-tacit-updates.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
+	# NetworkManager runs the network: systemd-networkd, its wait-online and homed stay off at the first boot
+	install -Dm644 systemd/system-preset/80-tacit-network.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
 	install -Dm644 updates/50-tacit-updates.rules -t "$pkgdir/usr/share/polkit-1/rules.d/"
 	# the keyboard and touchpad awake (udev/): a HID device that autosuspends does not always come back
 	install -Dm644 udev/99-tacit-input-awake.rules -t "$pkgdir/usr/lib/udev/rules.d/"

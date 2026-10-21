@@ -4,6 +4,7 @@ post_install() {
 	systemctl preset tacit-fetch-updates.timer tacit-system-update.service >/dev/null 2>&1 || true
 	_mirrors
 	_nvidia
+	_network
 }
 post_upgrade() {
 	post_install
@@ -35,4 +36,17 @@ _nvidia() {
 	printf '%s\n' '# Tacit (tacit-session): NVIDIA video memory kept across sleep, for nvidia-suspend/-hibernate/-resume' \
 		'options nvidia NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp' > "$conf"
 	systemctl enable nvidia-suspend.service nvidia-hibernate.service nvidia-resume.service >/dev/null 2>&1 || true
+}
+
+# Installs before 1.0.2 had systemd-networkd, its wait-online (two minutes of waiting at a start that asked for the
+# network) and homed turned on beside NetworkManager by systemd's own first-boot preset. Off once, where NetworkManager
+# runs and no networkd configuration says otherwise; from the next start (an update restarts anyway).
+_network() {
+	local done=/var/lib/tacit/network-presets
+	[ -e "$done" ] && return 0
+	systemctl is-enabled -q NetworkManager.service 2>/dev/null || return 0
+	ls /etc/systemd/network/*.network >/dev/null 2>&1 && return 0
+	systemctl disable systemd-networkd.service systemd-networkd.socket systemd-networkd-wait-online.service \
+		systemd-homed.service >/dev/null 2>&1 || true
+	mkdir -p /var/lib/tacit && touch "$done"
 }

@@ -1,6 +1,17 @@
 {
   "releases": [
     {
+      "version": "1.1.1",
+      "date": "2026-10-21",
+      "changes": [
+        "Screen recording lives in the notch: press Super+Shift+R, or find Screen recording in the palette, and record the whole screen, an area or a window, with or without sound. The notch shows the time while it records, and a click stops it.",
+        "Praxis works with the new opencode: it runs opencode sessions again, and signs in to OpenCode Zen and other providers.",
+        "Copy, cut and paste in Files always paste what you copied last, from any window or app.",
+        "Thyris: a sideways swipe in Google Sheets and other pages that scroll sideways on their own no longer goes back a page.",
+        "The notch makes room for a 12-hour clock, so AM and PM no longer run into what is shown beside it."
+      ]
+    },
+    {
       "version": "1.1.0",
       "date": "2026-10-21",
       "changes": [

@@ -28,7 +28,7 @@ rm -rf $p; cp -r /usr/share/archiso/configs/baseline $p
 cp -a /work/iso/airootfs/. $p/airootfs/
 grep -v '^#' /work/iso/packages.x86_64 | grep . >> $p/packages.x86_64
 # what the installed system keeps of the image's own files; the rest are the live system's
-KEEP='^(etc/(passwd|shadow|group|gshadow|localtime)|etc/systemd/system/display-manager.service|etc/systemd/system/multi-user.target.wants/(NetworkManager|bluetooth|avahi-daemon).service|etc/systemd/system/sockets.target.wants/cups.socket)$'
+KEEP='^(etc/(passwd|shadow|group|gshadow|localtime)|etc/modprobe.d/broadcom-wl-dkms.conf|etc/systemd/system/display-manager.service|etc/systemd/system/multi-user.target.wants/(NetworkManager|bluetooth|avahi-daemon).service|etc/systemd/system/sockets.target.wants/cups.socket)$'
 mkdir -p $p/airootfs/usr/share/tacit
 (cd $p/airootfs && find . \( -type f -o -type l \) | sed 's|^\./||' | grep -Ev "$KEEP" | sort) > /tmp/live-files
 echo "usr/share/tacit/live-files" >> /tmp/live-files

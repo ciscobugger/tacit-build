@@ -6,7 +6,7 @@ _pkgver=6.12.0
 pkgver=6.12.0
 pkgrel=1
 arch=('aarch64' 'x86_64')
-url='https://github.com/ciscobugger/tacit-text'
+url='https://github.com/ciscobugger/tacit-build'
 license=('GPL-3.0-only' 'LGPL-3.0-only' 'LicenseRef-Qt-Commercial' 'Qt-GPL-exception-1.0')
 pkgdesc="Tacit: Qt's QML and Quick classes with Tacit's text"
 depends=('glibc' 'libgcc' 'libstdc++' "qt6-base=$_pkgver")
@@ -16,11 +16,12 @@ provides=("qt6-declarative=$_pkgver")
 conflicts=('qt6-declarative')
 _pkgfn=qtdeclarative
 source=("git+https://code.qt.io/qt/$_pkgfn#tag=v$_pkgver"
-        "tacit-text::git+https://github.com/ciscobugger/tacit-text.git#commit=4a94f7c")
-sha256sums=('SKIP' 'SKIP')
+        # the patch beside this recipe, so the changed Qt's source is public as its licence asks (it was in a private repo)
+        "tacit-text-gamma.patch")
+sha256sums=('SKIP' 'e6e1d2dcfebafcaae8a47b593a120755a4d7f49b50cd3b59b9374bb8d0716b3e')
 
 prepare() {
-	patch -d $_pkgfn/src/quick/scenegraph -p1 < tacit-text/tacit-text-gamma.patch
+	patch -d $_pkgfn/src/quick/scenegraph -p1 < tacit-text-gamma.patch
 }
 
 build() {

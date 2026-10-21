@@ -1,0 +1,227 @@
+--- a/shaders_ng/24bittextmask.frag	2026-10-02 02:31:12.767277743 +0200
++++ b/shaders_ng/24bittextmask.frag	2026-10-02 03:13:02.247420521 +0200
+@@ -20,8 +20,30 @@
+     vec4 color;
+ };
+ 
++// Tacit (2026-10-02): text edges as if blended in linear light. Qt mixes a glyph's coverage with
++// the ground in sRGB values, which draws light text on a dark ground thin and grainy and dark text
++// on a light ground heavy; Windows, macOS and the browsers correct for the screen's gamma. The
++// coverage is moved to what linear-light blending against the opposite ground (black under light
++// text, white under dark) shows, as Skia does; mid-tone text gets a mix of the two.
++float tacitToLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
++float tacitToSrgb(float c) { return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
++// The curve is a 1.6 power, not sRGB's (~2.2): the full correction drew light strokes on dark grounds
++// thicker than the font is drawn (owner's pick B from live samples, 2026-10-02).
++const float tacitGamma = 1.60;
++float tacitEncode(float c) { return pow(max(c, 0.0), 1.0 / tacitGamma); }
++float tacitCoverage(float a, vec4 premultiplied)
++{
++    vec3 c = premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a : vec3(0.0);
++    float y = dot(vec3(tacitToLinear(c.r), tacitToLinear(c.g), tacitToLinear(c.b)), vec3(0.2126, 0.7152, 0.0722));
++    float light = y > 0.0 ? tacitEncode(a * y) / tacitEncode(y) : a;
++    float dark = y < 1.0 ? (1.0 - tacitEncode(1.0 - a * (1.0 - y))) / (1.0 - tacitEncode(y)) : a;
++    return clamp(mix(dark, light, smoothstep(0.08, 0.3, y)), 0.0, 1.0);
++}
++
+ void main()
+ {
+     vec4 glyph = texture(_qt_texture, sampleCoord);
++    // each subpixel's coverage on its own; the colour comes from the blend constant
++    glyph = vec4(tacitCoverage(glyph.r, color), tacitCoverage(glyph.g, color), tacitCoverage(glyph.b, color), tacitCoverage(glyph.a, color));
+     fragColor = glyph * color.a;
+ }
+--- a/shaders_ng/8bittextmask_a.frag	2026-10-02 02:31:12.767354097 +0200
++++ b/shaders_ng/8bittextmask_a.frag	2026-10-02 03:13:02.248500260 +0200
+@@ -20,7 +20,27 @@
+     vec4 color;
+ };
+ 
++// Tacit (2026-10-02): text edges as if blended in linear light. Qt mixes a glyph's coverage with
++// the ground in sRGB values, which draws light text on a dark ground thin and grainy and dark text
++// on a light ground heavy; Windows, macOS and the browsers correct for the screen's gamma. The
++// coverage is moved to what linear-light blending against the opposite ground (black under light
++// text, white under dark) shows, as Skia does; mid-tone text gets a mix of the two.
++float tacitToLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
++float tacitToSrgb(float c) { return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
++// The curve is a 1.6 power, not sRGB's (~2.2): the full correction drew light strokes on dark grounds
++// thicker than the font is drawn (owner's pick B from live samples, 2026-10-02).
++const float tacitGamma = 1.60;
++float tacitEncode(float c) { return pow(max(c, 0.0), 1.0 / tacitGamma); }
++float tacitCoverage(float a, vec4 premultiplied)
++{
++    vec3 c = premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a : vec3(0.0);
++    float y = dot(vec3(tacitToLinear(c.r), tacitToLinear(c.g), tacitToLinear(c.b)), vec3(0.2126, 0.7152, 0.0722));
++    float light = y > 0.0 ? tacitEncode(a * y) / tacitEncode(y) : a;
++    float dark = y < 1.0 ? (1.0 - tacitEncode(1.0 - a * (1.0 - y))) / (1.0 - tacitEncode(y)) : a;
++    return clamp(mix(dark, light, smoothstep(0.08, 0.3, y)), 0.0, 1.0);
++}
++
+ void main()
+ {
+-    fragColor = color * texture(_qt_texture, sampleCoord).a; // take .a instead of .r
++    fragColor = color * tacitCoverage(texture(_qt_texture, sampleCoord).a, color); // take .a instead of .r
+ }
+--- a/shaders_ng/8bittextmask.frag	2026-10-02 02:31:12.767337743 +0200
++++ b/shaders_ng/8bittextmask.frag	2026-10-02 03:13:02.248314434 +0200
+@@ -20,7 +20,27 @@
+     vec4 color;
+ };
+ 
++// Tacit (2026-10-02): text edges as if blended in linear light. Qt mixes a glyph's coverage with
++// the ground in sRGB values, which draws light text on a dark ground thin and grainy and dark text
++// on a light ground heavy; Windows, macOS and the browsers correct for the screen's gamma. The
++// coverage is moved to what linear-light blending against the opposite ground (black under light
++// text, white under dark) shows, as Skia does; mid-tone text gets a mix of the two.
++float tacitToLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
++float tacitToSrgb(float c) { return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
++// The curve is a 1.6 power, not sRGB's (~2.2): the full correction drew light strokes on dark grounds
++// thicker than the font is drawn (owner's pick B from live samples, 2026-10-02).
++const float tacitGamma = 1.60;
++float tacitEncode(float c) { return pow(max(c, 0.0), 1.0 / tacitGamma); }
++float tacitCoverage(float a, vec4 premultiplied)
++{
++    vec3 c = premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a : vec3(0.0);
++    float y = dot(vec3(tacitToLinear(c.r), tacitToLinear(c.g), tacitToLinear(c.b)), vec3(0.2126, 0.7152, 0.0722));
++    float light = y > 0.0 ? tacitEncode(a * y) / tacitEncode(y) : a;
++    float dark = y < 1.0 ? (1.0 - tacitEncode(1.0 - a * (1.0 - y))) / (1.0 - tacitEncode(y)) : a;
++    return clamp(mix(dark, light, smoothstep(0.08, 0.3, y)), 0.0, 1.0);
++}
++
+ void main()
+ {
+-    fragColor = color * texture(_qt_texture, sampleCoord).r;
++    fragColor = color * tacitCoverage(texture(_qt_texture, sampleCoord).r, color);
+ }
+--- a/shaders_ng/outlinedtext_a.frag	2026-10-02 02:31:12.767853315 +0200
++++ b/shaders_ng/outlinedtext_a.frag	2026-10-02 03:13:02.248248324 +0200
+@@ -28,9 +28,29 @@
+     vec2 shift;
+ };
+ 
++// Tacit (2026-10-02): text edges as if blended in linear light. Qt mixes a glyph's coverage with
++// the ground in sRGB values, which draws light text on a dark ground thin and grainy and dark text
++// on a light ground heavy; Windows, macOS and the browsers correct for the screen's gamma. The
++// coverage is moved to what linear-light blending against the opposite ground (black under light
++// text, white under dark) shows, as Skia does; mid-tone text gets a mix of the two.
++float tacitToLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
++float tacitToSrgb(float c) { return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
++// The curve is a 1.6 power, not sRGB's (~2.2): the full correction drew light strokes on dark grounds
++// thicker than the font is drawn (owner's pick B from live samples, 2026-10-02).
++const float tacitGamma = 1.60;
++float tacitEncode(float c) { return pow(max(c, 0.0), 1.0 / tacitGamma); }
++float tacitCoverage(float a, vec4 premultiplied)
++{
++    vec3 c = premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a : vec3(0.0);
++    float y = dot(vec3(tacitToLinear(c.r), tacitToLinear(c.g), tacitToLinear(c.b)), vec3(0.2126, 0.7152, 0.0722));
++    float light = y > 0.0 ? tacitEncode(a * y) / tacitEncode(y) : a;
++    float dark = y < 1.0 ? (1.0 - tacitEncode(1.0 - a * (1.0 - y))) / (1.0 - tacitEncode(y)) : a;
++    return clamp(mix(dark, light, smoothstep(0.08, 0.3, y)), 0.0, 1.0);
++}
++
+ void main()
+ {
+-    float glyph = texture(_qt_texture, sampleCoord).a; // take .a instead of .r
++    float glyph = tacitCoverage(texture(_qt_texture, sampleCoord).a, color); // take .a instead of .r
+     float outline = clamp(clamp(texture(_qt_texture, sCoordUp).a +
+                                 texture(_qt_texture, sCoordDown).a +
+                                 texture(_qt_texture, sCoordLeft).a +
+--- a/shaders_ng/outlinedtext.frag	2026-10-02 02:31:12.767820867 +0200
++++ b/shaders_ng/outlinedtext.frag	2026-10-02 03:13:02.248088598 +0200
+@@ -28,9 +28,29 @@
+     vec2 shift;
+ };
+ 
++// Tacit (2026-10-02): text edges as if blended in linear light. Qt mixes a glyph's coverage with
++// the ground in sRGB values, which draws light text on a dark ground thin and grainy and dark text
++// on a light ground heavy; Windows, macOS and the browsers correct for the screen's gamma. The
++// coverage is moved to what linear-light blending against the opposite ground (black under light
++// text, white under dark) shows, as Skia does; mid-tone text gets a mix of the two.
++float tacitToLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
++float tacitToSrgb(float c) { return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
++// The curve is a 1.6 power, not sRGB's (~2.2): the full correction drew light strokes on dark grounds
++// thicker than the font is drawn (owner's pick B from live samples, 2026-10-02).
++const float tacitGamma = 1.60;
++float tacitEncode(float c) { return pow(max(c, 0.0), 1.0 / tacitGamma); }
++float tacitCoverage(float a, vec4 premultiplied)
++{
++    vec3 c = premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a : vec3(0.0);
++    float y = dot(vec3(tacitToLinear(c.r), tacitToLinear(c.g), tacitToLinear(c.b)), vec3(0.2126, 0.7152, 0.0722));
++    float light = y > 0.0 ? tacitEncode(a * y) / tacitEncode(y) : a;
++    float dark = y < 1.0 ? (1.0 - tacitEncode(1.0 - a * (1.0 - y))) / (1.0 - tacitEncode(y)) : a;
++    return clamp(mix(dark, light, smoothstep(0.08, 0.3, y)), 0.0, 1.0);
++}
++
+ void main()
+ {
+-    float glyph = texture(_qt_texture, sampleCoord).r;
++    float glyph = tacitCoverage(texture(_qt_texture, sampleCoord).r, color);
+     float outline = clamp(clamp(texture(_qt_texture, sCoordUp).r +
+                                 texture(_qt_texture, sCoordDown).r +
+                                 texture(_qt_texture, sCoordLeft).r +
+--- a/shaders_ng/styledtext_a.frag	2026-10-02 02:31:12.768191335 +0200
++++ b/shaders_ng/styledtext_a.frag	2026-10-02 03:13:02.248444309 +0200
+@@ -25,9 +25,29 @@
+     vec2 shift;
+ };
+ 
++// Tacit (2026-10-02): text edges as if blended in linear light. Qt mixes a glyph's coverage with
++// the ground in sRGB values, which draws light text on a dark ground thin and grainy and dark text
++// on a light ground heavy; Windows, macOS and the browsers correct for the screen's gamma. The
++// coverage is moved to what linear-light blending against the opposite ground (black under light
++// text, white under dark) shows, as Skia does; mid-tone text gets a mix of the two.
++float tacitToLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
++float tacitToSrgb(float c) { return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
++// The curve is a 1.6 power, not sRGB's (~2.2): the full correction drew light strokes on dark grounds
++// thicker than the font is drawn (owner's pick B from live samples, 2026-10-02).
++const float tacitGamma = 1.60;
++float tacitEncode(float c) { return pow(max(c, 0.0), 1.0 / tacitGamma); }
++float tacitCoverage(float a, vec4 premultiplied)
++{
++    vec3 c = premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a : vec3(0.0);
++    float y = dot(vec3(tacitToLinear(c.r), tacitToLinear(c.g), tacitToLinear(c.b)), vec3(0.2126, 0.7152, 0.0722));
++    float light = y > 0.0 ? tacitEncode(a * y) / tacitEncode(y) : a;
++    float dark = y < 1.0 ? (1.0 - tacitEncode(1.0 - a * (1.0 - y))) / (1.0 - tacitEncode(y)) : a;
++    return clamp(mix(dark, light, smoothstep(0.08, 0.3, y)), 0.0, 1.0);
++}
++
+ void main()
+ {
+-    float glyph = texture(_qt_texture, sampleCoord).a; // take .a instead of .r
++    float glyph = tacitCoverage(texture(_qt_texture, sampleCoord).a, color); // take .a instead of .r
+     float style = clamp(texture(_qt_texture, shiftedSampleCoord).a - glyph,
+                         0.0, 1.0);
+     fragColor = style * styleColor + glyph * color;
+--- a/shaders_ng/styledtext.frag	2026-10-02 02:31:12.768157429 +0200
++++ b/shaders_ng/styledtext.frag	2026-10-02 03:13:02.248561889 +0200
+@@ -25,9 +25,29 @@
+     vec2 shift;
+ };
+ 
++// Tacit (2026-10-02): text edges as if blended in linear light. Qt mixes a glyph's coverage with
++// the ground in sRGB values, which draws light text on a dark ground thin and grainy and dark text
++// on a light ground heavy; Windows, macOS and the browsers correct for the screen's gamma. The
++// coverage is moved to what linear-light blending against the opposite ground (black under light
++// text, white under dark) shows, as Skia does; mid-tone text gets a mix of the two.
++float tacitToLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
++float tacitToSrgb(float c) { return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
++// The curve is a 1.6 power, not sRGB's (~2.2): the full correction drew light strokes on dark grounds
++// thicker than the font is drawn (owner's pick B from live samples, 2026-10-02).
++const float tacitGamma = 1.60;
++float tacitEncode(float c) { return pow(max(c, 0.0), 1.0 / tacitGamma); }
++float tacitCoverage(float a, vec4 premultiplied)
++{
++    vec3 c = premultiplied.a > 0.0 ? premultiplied.rgb / premultiplied.a : vec3(0.0);
++    float y = dot(vec3(tacitToLinear(c.r), tacitToLinear(c.g), tacitToLinear(c.b)), vec3(0.2126, 0.7152, 0.0722));
++    float light = y > 0.0 ? tacitEncode(a * y) / tacitEncode(y) : a;
++    float dark = y < 1.0 ? (1.0 - tacitEncode(1.0 - a * (1.0 - y))) / (1.0 - tacitEncode(y)) : a;
++    return clamp(mix(dark, light, smoothstep(0.08, 0.3, y)), 0.0, 1.0);
++}
++
+ void main()
+ {
+-    float glyph = texture(_qt_texture, sampleCoord).r;
++    float glyph = tacitCoverage(texture(_qt_texture, sampleCoord).r, color);
+     float style = clamp(texture(_qt_texture, shiftedSampleCoord).r - glyph,
+                         0.0, 1.0);
+     fragColor = style * styleColor + glyph * color;

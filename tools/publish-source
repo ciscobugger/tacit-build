@@ -1,27 +1,30 @@
 #!/bin/bash
-# tools/publish-source [version]: Tacit's public source, as clean copies of the private repos (owner, 2026-10-17). Each
-# part's committed code at its HEAD (no history, no uncommitted work) goes into its public repo as one new commit by
-# "Tacit"; a part with no licence gets the GPL-3.0 its packages declare, and one with no README a short one. The cloud
-# project's name is taken out, and nothing is pushed while the owner's own address is in it. The private repos stay the
-# working ones; run this at each release.
+# tools/publish-source [version]: Tacit's public source, commit by commit (owner, 2026-10-21; until 1.0.1 one clean copy
+# per release, 2026-10-17). Every commit of each private repo since the last one published goes into its public repo as
+# a commit of its own: the same message and dates, by "Tacit", its committed files only (no uncommitted work). A part
+# with no licence gets the GPL-3.0 its packages declare, the public README goes over the part's own (which becomes
+# DEVELOPING.md), and the cloud project's name is taken out. Nothing is pushed while a commit names the owner's own
+# address or holds what looks like a key. With a version, the release is tagged v<version> on top.
+#
+# Which private commit each public repo has reached: ~/.config/tacit-packages/public-sources ("<public name> <sha>"),
+# the private side's record. The private repos stay the working ones.
+# DRY=1: the public commits are made in a local copy, shown, and neither pushed nor recorded.
 set -eu
-version=${1:-$(date +%Y.%m.%d)}
+version=${1:-}
 me=$(gh api user -q .login)
 email="$(gh api user -q .id)+$me@users.noreply.github.com"
 licence=$HOME/.config/quickshell/tacit/LICENSE
 public=$(dirname "$(readlink -f "$0")")/public
+state=$HOME/.config/tacit-packages/public-sources
 # in pieces, so this file passes its own check
 owner_mail="xizko""55" project="himilo""-hoy"
+keys='AIza[0-9A-Za-z_-]{35}|sk-(ant-)?[A-Za-z0-9_-]{32,}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[bpas]-[A-Za-z0-9-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
 
-publish() {
-    local src=$1 name=$2 desc=$3 readme=$4
-    gh repo view "$me/$name" >/dev/null 2>&1 \
-        || gh repo create "$me/$name" --public --description "$desc" --homepage https://tacitos.co >/dev/null
-    local w
-    w=$(mktemp -d)
-    git clone -q "https://github.com/$me/$name.git" "$w" 2>/dev/null
+# the work tree $1 as private commit $3 of repo $2 has it, made public
+fill() {
+    local w=$1 src=$2 c=$3
     find "$w" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-    git -C "$src" archive HEAD | tar -x -C "$w"
+    git -C "$src" archive "$c" | tar -x -C "$w"
     [ -e "$w/LICENSE" ] || cp "$licence" "$w/LICENSE"
     # the public README, written for people rather than developers (tools/public/<name>.md, with its pictures in
     # tools/public/docs); the part's own README, which is for building it, goes on as DEVELOPING.md
@@ -32,20 +35,52 @@ publish() {
     fi
     [ -e "$w/README.md" ] || printf '%s\n' "$readme" > "$w/README.md"
     grep -rlI --null --exclude-dir=.git "$project" "$w" | xargs -0 -r sed -i "s/$project/YOUR-PROJECT/g"
-    if grep -rqI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w"; then
-        echo "publish-source: $name still names the owner's address or cloud project; nothing pushed" >&2
-        grep -rlI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w" >&2
-        exit 1
+}
+
+publish() {
+    local src=$1 desc=$3
+    name=$2 readme=$4
+    gh repo view "$me/$name" >/dev/null 2>&1 \
+        || gh repo create "$me/$name" --public --description "$desc" --homepage https://tacitos.co >/dev/null
+    local base w n=0 last
+    base=$(sed -n "s/^$name //p" "$state" 2>/dev/null)
+    [ -n "$base" ] || { echo "publish-source: $state names no private commit $name has reached" >&2; exit 1; }
+    w=$(mktemp -d)
+    git clone -q "https://github.com/$me/$name.git" "$w" 2>/dev/null
+    last=$base
+    for c in $(git -C "$src" rev-list --reverse --first-parent "$base..HEAD"); do
+        fill "$w" "$src" "$c"
+        local msg
+        msg=$(git -C "$src" log -1 --format=%B "$c" | sed "s/$project/YOUR-PROJECT/g")
+        if grep -rqI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w" || grep -q "$owner_mail" <<<"$msg"; then
+            echo "publish-source: $name at ${c:0:7} still names the owner's address or cloud project; nothing pushed" >&2
+            grep -rlI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w" >&2 || true
+            exit 1
+        fi
+        if git -C "$src" show --format= "$c" | grep '^+' | grep -qE "$keys"; then
+            echo "publish-source: $name at ${c:0:7} adds what looks like a key; nothing pushed" >&2
+            exit 1
+        fi
+        git -C "$w" add -A
+        last=$c
+        git -C "$w" diff --cached --quiet && continue    # nothing that is published changed
+        GIT_AUTHOR_DATE=$(git -C "$src" log -1 --format=%aI "$c") GIT_COMMITTER_DATE=$(git -C "$src" log -1 --format=%cI "$c") \
+            git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -F - <<<"$msg"
+        n=$((n + 1))
+    done
+    git -C "$w" branch -M main
+    if [ -n "${DRY:-}" ]; then
+        echo "$name: $n commits made in $w (DRY: nothing pushed)"
+        git -C "$w" log --format='  %ad  %s' --date=short "origin/main..main" | cut -c1-150
+        return
     fi
-    git -C "$w" add -A
-    if git -C "$w" diff --cached --quiet 2>/dev/null && git -C "$w" rev-parse -q --verify HEAD >/dev/null; then
-        echo "$name: unchanged"
-    else
-        git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -m "Tacit $version"
-        git -C "$w" branch -M main
-        git -C "$w" push -q -u origin main
-        echo "$name: https://github.com/$me/$name ($(git -C "$w" ls-files | wc -l) files)"
+    [ "$n" -gt 0 ] && git -C "$w" push -q origin main
+    if [ -n "$version" ] && ! git -C "$w" rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+        git -C "$w" -c user.name=Tacit -c user.email="$email" tag -a "v$version" -m "Tacit $version"
+        git -C "$w" push -q origin "v$version"
     fi
+    sed -i "s/^$name .*/$name $last/" "$state"
+    echo "$name: $n commits$([ -n "$version" ] && echo ", tagged v$version") — https://github.com/$me/$name"
     rm -rf "$w"
 }
 

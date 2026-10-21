@@ -1,0 +1,15 @@
+#!/bin/bash
+# tools/arch-day                 the day of Arch every Tacit computer updates to now (mirror.tacitos.co's DATE)
+# tools/arch-day YYYY/MM/DD      moves it there, once that day's update has passed in the VM: until then a candidate day
+#                                is tried with ARCH_MIRROR=https://archive.archlinux.org/repos/YYYY/MM/DD/\$repo/os/\$arch
+#                                (tools/cloud-packages, tools/iso, and the test VM's mirror list)
+set -eu
+conf=$HOME/dev/tacit-site/mirror/wrangler.jsonc
+now=$(sed -n 's/.*"DATE": "\([0-9/]*\)".*/\1/p' "$conf")
+[ $# -eq 0 ] && { echo "$now"; exit 0; }
+day=$1
+[[ "$day" =~ ^20[0-9]{2}/[01][0-9]/[0-3][0-9]$ ]] || { echo "arch-day: a day as YYYY/MM/DD" >&2; exit 1; }
+[[ "$day" > "$now" ]] || { echo "arch-day: $day is not after $now: Tacit's computers never go back a day" >&2; exit 1; }
+curl -sfI "https://archive.archlinux.org/repos/$day/core/os/x86_64/core.db" >/dev/null || { echo "arch-day: Arch's archive has no $day" >&2; exit 1; }
+sed -i "s|\"DATE\": \"$now\"|\"DATE\": \"$day\"|" "$conf"
+(cd "$(dirname "$conf")" && npx --yes wrangler@4 deploy >/dev/null) && echo "Tacit's computers update to Arch as of $day (was $now)"

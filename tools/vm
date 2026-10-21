@@ -6,7 +6,9 @@ Runs on the cloud machine (copied there as ~/tacit-vm/vm):
   vm start-usb <iso>    the ISO as a raw USB mass-storage disk (tests byte-for-byte flashed boot)
   vm start-virtio <iso> the ISO as a raw virtio disk
   vm shot <file.png>    the screen now
-  vm click X Y          a left click at screen pixel X,Y (1920x1080); vm move X Y moves only
+  vm click X Y          a left click at screen pixel X,Y (1920x1080); vm move X Y moves only; vm rclick X Y right
+  vm drag X1 Y1 X2 Y2 [ms] [hold-ms]   a left-button drag, moved over ms, rested hold-ms before letting go
+  vm scroll X Y N       N mouse-wheel steps at X,Y (down; N < 0 up)
   vm type <text>        the text as typed keys (a US keyboard's; --de German, --gb British);   vm key <name> [...]   keys at once (ret, tab, esc, ctrl, alt, ...)
   vm eject              eject the CD-ROM;          vm insert <iso>     replace the CD-ROM image
   vm reset              the power button held and pressed again
@@ -127,6 +129,37 @@ def main():
             for down in (True, False):
                 qmp("input-send-event", {"events": [{"type": "btn", "data": {"down": down, "button": "left"}}]})
                 time.sleep(0.05)
+    elif a[0] == "rclick":
+        x, y = int(a[1]) * 32767 // (W - 1), int(a[2]) * 32767 // (H - 1)
+        qmp("input-send-event", {"events": [{"type": "abs", "data": {"axis": "x", "value": x}},
+                                            {"type": "abs", "data": {"axis": "y", "value": y}}]})
+        time.sleep(0.05)
+        for down in (True, False):
+            qmp("input-send-event", {"events": [{"type": "btn", "data": {"down": down, "button": "right"}}]})
+            time.sleep(0.05)
+    elif a[0] == "scroll":
+        # scroll X Y N: N mouse-wheel steps at X,Y, down (N < 0: up)
+        x, y, n = int(a[1]) * 32767 // (W - 1), int(a[2]) * 32767 // (H - 1), int(a[3])
+        qmp("input-send-event", {"events": [{"type": "abs", "data": {"axis": "x", "value": x}},
+                                            {"type": "abs", "data": {"axis": "y", "value": y}}]})
+        for _ in range(abs(n)):
+            for down in (True, False):
+                qmp("input-send-event", {"events": [{"type": "btn", "data": {"down": down, "button": "wheel-down" if n > 0 else "wheel-up"}}]})
+            time.sleep(0.04)
+    elif a[0] == "drag":
+        # drag X1 Y1 X2 Y2 [ms] [hold-ms]: press at the first point, move to the second over ms (60 steps a second),
+        # rest there hold-ms, let go: a hand's drag, for gestures
+        x1, y1, x2, y2 = (int(v) for v in a[1:5])
+        ms, hold = (int(a[5]) if len(a) > 5 else 400), (int(a[6]) if len(a) > 6 else 0)
+        to = lambda x, y: qmp("input-send-event", {"events": [{"type": "abs", "data": {"axis": "x", "value": x * 32767 // (W - 1)}},
+                                                              {"type": "abs", "data": {"axis": "y", "value": y * 32767 // (H - 1)}}]})
+        to(x1, y1); time.sleep(0.05)
+        qmp("input-send-event", {"events": [{"type": "btn", "data": {"down": True, "button": "left"}}]})
+        n = max(1, ms * 60 // 1000)
+        for i in range(1, n + 1):
+            to(round(x1 + (x2 - x1) * i / n), round(y1 + (y2 - y1) * i / n)); time.sleep(ms / 1000 / n)
+        time.sleep(hold / 1000)
+        qmp("input-send-event", {"events": [{"type": "btn", "data": {"down": False, "button": "left"}}]})
     elif a[0] == "type":
         # --de: the computer types German (y and z swapped, symbols elsewhere): send the keys that give these characters
         table = QCODE

@@ -68,6 +68,15 @@ publish() {
             git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -F - <<<"$msg"
         n=$((n + 1))
     done
+    # the public README or its pictures changed with no new commit of the part: that change on its own
+    if [ "$n" = 0 ]; then
+        fill "$w" "$src" "$last"
+        git -C "$w" add -A
+        if ! git -C "$w" diff --cached --quiet; then
+            git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -m "README updated"
+            n=1
+        fi
+    fi
     git -C "$w" branch -M main
     if [ -n "${DRY:-}" ]; then
         echo "$name: $n commits made in $w (DRY: nothing pushed)"

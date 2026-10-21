@@ -15,8 +15,11 @@ cat > "$tmp/inside.sh" <<'INSIDE'
 #!/bin/bash
 set -euo pipefail
 trap 'chown -R "$HOSTUID" /work 2>/dev/null || true' EXIT
+# the image from Arch as Tacit ships it (mirror.tacitos.co's day, or ARCH_MIRROR): an install starts on the set its
+# updates continue from, not on whatever Arch had the day the image was made (mkarchiso reads this list too)
+echo "Server = ${ARCH_MIRROR:-https://mirror.tacitos.co/\$repo/os/\$arch}" > /etc/pacman.d/mirrorlist
 pacman-key --init >/dev/null 2>&1; pacman-key --populate archlinux >/dev/null 2>&1
-pacman -Syu --noconfirm --needed archiso grub >/dev/null    # grub: the baseline profile's UEFI boot
+pacman -Syuu --noconfirm --needed archiso grub >/dev/null    # grub: the baseline profile's UEFI boot
 # Tacit's key, so the build checks [tacit]'s packages and database
 pacman-key --add /work/tacit.gpg >/dev/null 2>&1
 pacman-key --lsign-key 141AB0375DCEE1F546BCC32294D3C7B496EE6E61 >/dev/null 2>&1
@@ -83,7 +86,7 @@ on() { timeout 600 gcloud compute ssh $vm "${at[@]}" --command "$1"; }
 on "sudo rm -rf ~/tacit-iso && mkdir -p ~/tacit-iso/work/repo"
 gcloud compute scp "${at[@]}" "$tmp/iso.tar" "$tmp/repo.tar" $vm:~/tacit-iso/ >/dev/null
 on "cd ~/tacit-iso && tar -xf iso.tar -C work && tar -xf repo.tar -C work/repo \
-    && (setsid nohup bash -c 'sudo docker run --rm --privileged --network=host -e HOSTUID=\$(id -u) -v \$HOME/tacit-iso/work:/work archlinux:latest bash /work/inside.sh > \$HOME/tacit-iso/run.log 2>&1; echo \$? > \$HOME/tacit-iso/done' > /dev/null 2>&1 < /dev/null &)"
+    && (setsid nohup bash -c 'sudo docker run --rm --privileged --network=host -e HOSTUID=\$(id -u) -e ARCH_MIRROR=${ARCH_MIRROR:-} -v \$HOME/tacit-iso/work:/work archlinux:latest bash /work/inside.sh > \$HOME/tacit-iso/run.log 2>&1; echo \$? > \$HOME/tacit-iso/done' > /dev/null 2>&1 < /dev/null &)"
 until on "test -f ~/tacit-iso/done" 2>/dev/null; do sleep 60; done
 on "cat ~/tacit-iso/run.log"
 status=$(on "cat ~/tacit-iso/done")

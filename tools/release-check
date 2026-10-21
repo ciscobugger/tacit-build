@@ -1,0 +1,90 @@
+#!/bin/bash
+# tools/release-check <version>                 the gates a Tacit release passes before tools/publish (RELEASE.md)
+# tools/release-check <version> --vm-passed "…"  records that the VM round for <version> passed, with what was checked
+#
+# Each gate prints ok or FAIL, and the command fails if any did. It changes nothing but the VM record.
+set -u
+here=$(dirname "$(dirname "$(readlink -f "$0")")"); cd "$here"
+version=${1:-}; [ -n "$version" ] || { echo "usage: tools/release-check <version> [--vm-passed \"what was checked\"]" >&2; exit 2; }
+out=out/x86_64
+record=$out/vm-passed-$version
+if [ "${2:-}" = --vm-passed ]; then
+	[ -n "${3:-}" ] || { echo "release-check: say what the VM round checked" >&2; exit 2; }
+	printf '%s\n%s\narch day %s\n' "$(date -Is)" "$3" "$(tools/arch-day)" > "$record" && echo "recorded: $record"
+	exit 0
+fi
+failed=0
+ok()   { printf '  ok    %s\n' "$*"; }
+bad()  { printf '  FAIL  %s\n' "$*"; failed=1; }
+note() { printf '  note  %s\n' "$*"; }
+
+# where each private repo is checked out on this machine
+declare -A clone=(
+	[tacit-shell]=$HOME/.config/quickshell/tacit [tacit-opsis]=$HOME/dev/browser [tacit-agent-host]=$HOME/dev/agent-host
+	[tacit-portal]=$HOME/dev/tacit-portal [tacit-boot]=$HOME/dev/tacit-boot [tacit-font]=$HOME/dev/tacit-font
+	[tacit-icons]=$HOME/dev/tacit-icons [tacit-foot]=$HOME/dev/tacit-foot [tacit-text]=$HOME/dev/tacit-text
+	[book4-edge-linux]=$HOME/dev/book4-edge-linux
+)
+
+echo "== the release: tacit $version"
+tv=$(cd tacit && bash -c 'source PKGBUILD; echo "$pkgver"')
+[ "$tv" = "$version" ] && ok "tacit's pkgver is $version" || bad "tacit's pkgver is $tv, not $version"
+python3 - "$version" <<'EOF' && ok "notes.json leads with $version and says what changed" || bad "notes.json: no $version entry with changes first"
+import json, sys
+r = json.load(open("tacit/notes.json"))["releases"][0]
+sys.exit(0 if r.get("version") == sys.argv[1] and r.get("changes") else 1)
+EOF
+
+echo "== sources: every pin is pushed and none is behind what was fixed"
+for f in */PKGBUILD; do
+	d=${f%/PKGBUILD}
+	src=$(grep -o 'github.com/ciscobugger/[A-Za-z0-9_.-]*\.git#[a-z]*=[^"]*' "$f" | head -1)
+	[ -n "$src" ] || continue
+	repo=$(sed 's|github.com/ciscobugger/\(.*\)\.git#.*|\1|' <<<"$src")
+	ref=$(sed 's|.*#[a-z]*=||' <<<"$src"); kind=$(sed 's|.*#\([a-z]*\)=.*|\1|' <<<"$src")
+	ref=$(cd "$d" && bash -c "source PKGBUILD; echo \"$ref\"")
+	c=${clone[$repo]:-}
+	if [ -z "$c" ] || [ ! -e "$c/.git" ]; then note "$d: $repo not checked out here"; continue; fi
+	if [ "$kind" = tag ]; then
+		git -C "$c" ls-remote --exit-code --tags origin "refs/tags/$ref" >/dev/null 2>&1 || { bad "$d: tag $ref is not on GitHub"; continue; }
+		after=$(git -C "$c" rev-list --count "$ref..origin/HEAD" 2>/dev/null || git -C "$c" rev-list --count "$ref..HEAD")
+		[ "$after" = 0 ] && ok "$d: $ref" || note "$d: $ref, $after commits after it are not in this release"
+	else
+		git -C "$c" fetch -q origin 2>/dev/null
+		git -C "$c" branch -r --contains "$ref" 2>/dev/null | grep -q . || { bad "$d: commit ${ref:0:7} is not pushed"; continue; }
+		behind=$(git -C "$c" rev-list --count "$ref..HEAD")
+		[ "$behind" = 0 ] && ok "$d: ${ref:0:7} (HEAD)" || bad "$d: ${ref:0:7} is $behind commits behind HEAD: pin the new commit or say why not"
+	fi
+	unpushed=$(git -C "$c" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+	[ "$unpushed" = 0 ] || bad "$d: $unpushed commits in $c are not pushed"
+done
+
+echo "== packages: each new version built, against the day of Arch Tacit ships"
+db=/var/tmp/release-check; mkdir -p "$db"
+gcloud storage cp -q gs://tacit-packages-2aafc574/x86_64/tacit.db.tar.zst "$db/" >/dev/null 2>&1 || note "the live repo's database could not be read: every package is checked"
+live=$(tar -tf "$db/tacit.db.tar.zst" 2>/dev/null | sed -n 's|/$||p')
+day=$(tools/arch-day)
+newest=0
+for f in */PKGBUILD; do
+	d=${f%/PKGBUILD}
+	[ "$d" = tacit-device-book4-edge ] && continue      # aarch64, built on the Book4
+	v=$(cd "$d" && bash -c 'source PKGBUILD; echo "${epoch:+$epoch:}$pkgver-$pkgrel"' 2>/dev/null) || continue
+	grep -qx "$d-$v" <<<"$live" && continue             # already published: not part of this release
+	p=$(ls -t $out/$d-$v-*.pkg.tar.zst 2>/dev/null | head -1)
+	[ -n "$p" ] || { bad "$d $v: not built"; continue; }
+	[ "$p" -nt "$f" ] || { bad "$d $v: its recipe changed after it was built"; continue; }
+	t=$(stat -c %Y "$p"); [ "$t" -gt "$newest" ] && newest=$t
+	against=$(cat "$out/$d.built-against" 2>/dev/null || echo "")
+	if [ "$against" = "$day" ]; then ok "$d $v, against Arch $day"
+	elif [ -z "$against" ]; then bad "$d $v: no record of the Arch day it was built against"
+	else note "$d $v: built against $against, Tacit ships $day (a candidate day: move it with tools/arch-day after the VM)"; fi
+done
+
+echo "== the VM round"
+if [ ! -f "$record" ]; then bad "no VM round recorded for $version (tools/release-check $version --vm-passed \"…\")"
+elif [ "$(stat -c %Y "$record")" -lt "$newest" ]; then bad "the VM round for $version came before the newest package: test again"
+else ok "VM round: $(sed -n 2p "$record")"; fi
+
+echo
+[ "$failed" = 0 ] && echo "release-check: $version can be published" || echo "release-check: $version is not ready"
+exit "$failed"

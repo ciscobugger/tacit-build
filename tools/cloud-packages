@@ -74,3 +74,8 @@ for f in $(tar -tf "$tmp/new.tar" | grep '\.pkg\.tar\.zst$'); do
 	bad=$(bsdtar -tf "out/x86_64/$f" | grep -E "^(home|usr/local|root)/" || true)
 	echo "   $f  $( [ -z "$bad" ] && echo "places ok" || echo "BAD PLACES: $bad")"
 done
+# the day of Arch each was built against, for tools/release-check: ARCH_MIRROR's day, or the one Tacit ships
+built_day=$(grep -o '20[0-9][0-9]/[01][0-9]/[0-3][0-9]' <<<"${ARCH_MIRROR:-}" || tools/arch-day)
+for p in "$@"; do
+	tar -tf "$tmp/new.tar" | grep -q "^$p-[0-9].*\.pkg\.tar\.zst$" && echo "$built_day" > "out/x86_64/$p.built-against"
+done

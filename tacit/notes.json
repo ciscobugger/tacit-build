@@ -1,7 +1,7 @@
 {
   "releases": [
     {
-      "version": "1.0.2",
+      "version": "1.1.0",
       "date": "2026-10-21",
       "changes": [
         "Updates come from Tacit's tested copy of Arch: Restart, or pacman in a terminal, installs only what Tacit has tested.",

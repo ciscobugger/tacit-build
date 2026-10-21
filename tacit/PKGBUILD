@@ -1,7 +1,7 @@
 # Tacit: installs Tacit (the core, on any computer). A laptop adds its device package (tacit-device-<model>).
 pkgname=tacit
-pkgver=1.0.2
-pkgrel=4
+pkgver=1.1.0
+pkgrel=1
 pkgdesc="Tacit"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-packages"

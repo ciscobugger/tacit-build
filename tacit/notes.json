@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "1.1.2",
+      "date": "2026-10-22",
+      "changes": [
+        "A picture opened from Files comes up in front of it, in the middle of the screen.",
+        "The sunset plays when you shut down or restart. Shutting down no longer waits five seconds, and no text flashes on the screen at the end.",
+        "The touchpad has its own speed in Settings > Keyboard & touchpad, apart from the mouse, and speeds are shown in words.",
+        "Tacit's own wallpapers, the 14 Horizons, are in Pictures > Wallpapers and in Settings > Wallpaper, on accounts that had no Wallpapers folder yet.",
+        "Games and other older apps show Tacit's pointer instead of a plain grey arrow.",
+        "Bluetooth has the security fixes made since its last release, among them two that someone nearby could use.",
+        "Passphrases for SSH keys and signing ask in the notch again instead of failing at once."
+      ]
+    },
+    {
       "version": "1.1.1",
       "date": "2026-10-21",
       "changes": [

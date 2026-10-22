@@ -7,7 +7,7 @@ arch=('any')
 url="https://github.com/ciscobugger/tacit-packages"
 license=('GPL-3.0-or-later')
 # the release's own parts at least this new, so an update to this Tacit brings them (its notes say what they fix)
-depends=('tacit-shell>=0.2.1-35' 'tacit-session>=0.2.1-27' 'tacit-agent-host>=0.1.5' 'tacit-portal' 'tacit-boot>=0.2.1-2' 'tacit-cpu-policy'
+depends=('tacit-shell>=0.2.1-35' 'tacit-session>=0.2.1-28' 'tacit-agent-host>=0.1.5' 'tacit-portal' 'tacit-boot>=0.2.1-2' 'tacit-cpu-policy'
          'tacit-fonts' 'tacit-icons>=0.1.0-2' 'bluez>=5.87-2.1' 'tacit-foot' 'tacit-qt6-declarative')
 source=('notes.json')
 sha256sums=('SKIP')

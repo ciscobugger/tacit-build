@@ -3,3 +3,11 @@ post_install() {
 	systemctl preset tacit-bootd.service tacit-bootd-release.service tacit-shutdown.service >/dev/null 2>&1 || true
 	systemctl --global preset tacit-dusk.service >/dev/null 2>&1 || true
 }
+
+# 0.2.0 enabled the dusk for graphical-session.target, which Tacit's session never starts; an update keeps the links a
+# unit got when it was enabled, so on every updated computer the dusk still never ran (the 1.1.2 VM test). Enabled
+# again, it is linked by the unit as it is now; one turned off stays off.
+post_upgrade() {
+	systemctl --global is-enabled -q tacit-dusk.service 2>/dev/null \
+		&& systemctl --global reenable tacit-dusk.service >/dev/null 2>&1 || true
+}

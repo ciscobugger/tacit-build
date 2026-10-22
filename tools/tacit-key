@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """tools/tacit-key make <out dir>: Tacit's package signing key, its master in Cloud KMS.
+tools/tacit-key subkey <public key> <out dir>: adds Cloud KMS key tacit/packages-signing to the key as its signing subkey
+tools/tacit-key sign <file> ...: <file>.sig for each, by the KMS signing subkey (what tools/publish uses)
 
 pacman checks packages with OpenPGP. The master key (certify only) is Cloud KMS key tacit/packages-master in YOUR-PROJECT
 (RSA 4096, PKCS #1 v1.5 with SHA-512, which is OpenPGP's RSA signature): its private half never leaves KMS, which signs
@@ -7,20 +9,30 @@ the key's certifications through this computer's gcloud login. Packages are sign
 made here; its private half goes only into <out dir>/tacit-signing-subkey.pgp, next to the master's stub, for gpg.
 Written: tacit.pgp (the public key, for pacman's keyring), tacit-signing-subkey.pgp (secret, mode 600), fingerprint.
 Packets per RFC 4880 (v4 keys, v4 signatures); `gpg --check-sigs` on the result is the proof.
+
+Since 2026-10-22 the signing subkey is a KMS key too (tacit/packages-signing): neither private half exists outside
+KMS, every signature is in Cloud KMS's log, and taking away this computer's access stops signing. The first subkey
+(made here, its secret in a file) signs only until every Tacit computer has the keyring with the KMS one.
+TACIT_KEY_FAKE_KMS=<dir> signs with <dir>/packages-master.pem and <dir>/packages-signing.pem instead (tests).
 """
+import base64
 import hashlib
+import json
 import os
 import struct
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.asymmetric import padding, rsa, utils
 
 KMS = ["--project", "YOUR-PROJECT", "--location", "europe-north1", "--keyring", "tacit", "--key", "packages-master",
        "--version", "1"]
+KMS_PATH = "projects/YOUR-PROJECT/locations/europe-north1/keyRings/tacit/cryptoKeys/{}/cryptoKeyVersions/1"
+FAKE = os.environ.get("TACIT_KEY_FAKE_KMS")
 UID = b"Tacit packages"
 SUBKEY_LIFE = 2 * 365 * 86400
 
@@ -75,6 +87,8 @@ def signature(sigtype, material, hashed, issuer_fpr, sign):
 
 
 def kms_sign(data):
+    if FAKE:
+        return kms_sign_digest("packages-master", hashlib.sha512(data).digest())
     with tempfile.TemporaryDirectory() as tmp:
         src, out = os.path.join(tmp, "data"), os.path.join(tmp, "sig")
         with open(src, "wb") as f:
@@ -85,7 +99,127 @@ def kms_sign(data):
             return f.read()
 
 
+def kms_sign_digest(key, digest):
+    """KMS key `key` (packages-master or packages-signing) signs a SHA-512 digest: PKCS #1 v1.5, OpenPGP's RSA."""
+    if FAKE:
+        with open(os.path.join(FAKE, key + ".pem"), "rb") as f:
+            private = serialization.load_pem_private_key(f.read(), None)
+        return private.sign(digest, padding.PKCS1v15(), utils.Prehashed(hashes.SHA512()))
+    token = subprocess.run(["gcloud", "auth", "print-access-token"], check=True, capture_output=True, text=True).stdout.strip()
+    req = urllib.request.Request(f"https://cloudkms.googleapis.com/v1/{KMS_PATH.format(key)}:asymmetricSign",
+                                 data=json.dumps({"digest": {"sha512": base64.b64encode(digest).decode()}}).encode(),
+                                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return base64.b64decode(json.load(r)["signature"])
+
+
+def kms_public_of(key):
+    if FAKE:
+        with open(os.path.join(FAKE, key + ".pem"), "rb") as f:
+            return serialization.load_pem_private_key(f.read(), None).public_key()
+    token = subprocess.run(["gcloud", "auth", "print-access-token"], check=True, capture_output=True, text=True).stdout.strip()
+    req = urllib.request.Request(f"https://cloudkms.googleapis.com/v1/{KMS_PATH.format(key)}/publicKey",
+                                 headers={"Authorization": f"Bearer {token}"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return serialization.load_pem_public_key(json.load(r)["pem"].encode())
+
+
+def checked(key, public):
+    """A signer by digest that proves KMS signed with the key we expect."""
+    def sign(digest):
+        sig = kms_sign_digest(key, digest)
+        public.verify(sig, digest, padding.PKCS1v15(), utils.Prehashed(hashes.SHA512()))
+        return sig
+    return sign
+
+
+def signature_digest(sigtype, prefix, hashed, issuer_fpr, sign_digest, stream=None):
+    """A v4 signature packet's body, hashing `prefix` then `stream` (a file) as it reads; `sign_digest` signs SHA-512."""
+    sigdata = bytes([4, sigtype, 1, 10]) + struct.pack(">H", len(hashed)) + hashed   # RSA, SHA-512
+    h = hashlib.sha512(prefix)
+    if stream:
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            h.update(block)
+    h.update(sigdata + b"\x04\xff" + struct.pack(">I", len(sigdata)))
+    digest = h.digest()
+    unhashed = subpacket(16, issuer_fpr[-8:])
+    return sigdata + struct.pack(">H", len(unhashed)) + unhashed + digest[:2] + mpi(int.from_bytes(sign_digest(digest), "big"))
+
+
+def read_packets(data):
+    """(tag, body) for each packet of a public key (new-format lengths, as make writes and gpg exports)."""
+    out, i = [], 0
+    while i < len(data):
+        head = data[i]; i += 1
+        if head & 0x40:
+            tag, n = head & 0x3F, data[i]
+            if n < 192: i += 1
+            elif n < 224: n = ((n - 192) << 8) + data[i + 1] + 192; i += 2
+            else: n = struct.unpack(">I", data[i + 1:i + 5])[0]; i += 5
+        else:   # old format
+            tag, kind = (head >> 2) & 0x0F, head & 3
+            size = {0: 1, 1: 2, 2: 4}[kind]
+            n = int.from_bytes(data[i:i + size], "big"); i += size
+        out.append((tag, data[i:i + n])); i += n
+    return out
+
+
+def subkey(public_path, out):
+    """The key at `public_path` plus the KMS signing key as a second signing subkey, bound by the KMS master."""
+    with open(public_path, "rb") as f:
+        old = f.read()
+    packets = read_packets(old)
+    primary = next(body for tag, body in packets if tag == 6)
+    pfpr = fingerprint(primary)
+    master, signer = kms_public_of("packages-master"), kms_public_of("packages-signing")
+    # the KMS master is the key's master: its public half must be the primary's
+    if key_body(struct.unpack(">I", primary[1:5])[0], master) != primary:
+        sys.exit("tacit-key: KMS key packages-master is not this key's master")
+    now = int(time.time())
+    subbody = key_body(now, signer)
+    sfpr = fingerprint(subbody)
+    if any(tag == 14 and fingerprint(body) == sfpr for tag, body in packets):
+        sys.exit("tacit-key: the KMS signing key is already a subkey here")
+    both = key_material(primary) + key_material(subbody)
+    back = signature_digest(0x19, both, subpacket(2, struct.pack(">I", now)) + subpacket(33, b"\x04" + sfpr), sfpr,
+                            checked("packages-signing", signer))
+    binding = signature_digest(0x18, both,
+                               subpacket(2, struct.pack(">I", now)) + subpacket(27, b"\x02")
+                               + subpacket(9, struct.pack(">I", SUBKEY_LIFE)) + subpacket(33, b"\x04" + pfpr)
+                               + subpacket(32, back), pfpr, checked("packages-master", master))
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "tacit.pgp"), "wb") as f:
+        f.write(old + packet(14, subbody) + packet(2, binding))
+    with open(os.path.join(out, "fingerprint"), "w") as f:
+        f.write(f"master {pfpr.hex().upper()}\nsubkey {sfpr.hex().upper()} (KMS packages-signing)\n")
+    print(f"master {pfpr.hex().upper()}\nsubkey {sfpr.hex().upper()} (KMS packages-signing)")
+
+
+def sign(paths):
+    """<path>.sig: a detached binary signature (type 0x00) by the KMS signing subkey, as pacman and repo-add expect."""
+    signer = kms_public_of("packages-signing")
+    created = int(time.time())
+    # the subkey's fingerprint covers its creation time, which lives in the published key: read it from there
+    keyfile = os.environ.get("TACIT_KEY_PUBLIC") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tacit-keyring", "tacit.gpg")
+    with open(keyfile, "rb") as f:
+        bodies = [body for tag, body in read_packets(f.read()) if tag == 14]
+    n = signer.public_numbers().n
+    match = [b for b in bodies if mpi(n) in b]
+    if not match:
+        sys.exit(f"tacit-key: {keyfile} has no subkey for KMS packages-signing (run tools/tacit-key subkey first)")
+    sfpr = fingerprint(match[0])
+    sign_digest = checked("packages-signing", signer)
+    for path in paths:
+        with open(path, "rb") as f:
+            body = signature_digest(0x00, b"", subpacket(2, struct.pack(">I", created)) + subpacket(33, b"\x04" + sfpr),
+                                    sfpr, sign_digest, stream=f)
+        with open(path + ".sig", "wb") as f:
+            f.write(packet(2, body))
+
+
 def kms_public():
+    if FAKE:
+        return kms_public_of("packages-master")
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "key.pem")
         subprocess.run(["gcloud", "kms", "keys", "versions", "get-public-key", "1", *[a for a in KMS if a not in ("--version", "1")],
@@ -146,6 +280,11 @@ def make(out):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3 or sys.argv[1] != "make":
+    if len(sys.argv) == 3 and sys.argv[1] == "make":
+        make(sys.argv[2])
+    elif len(sys.argv) == 4 and sys.argv[1] == "subkey":
+        subkey(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) >= 3 and sys.argv[1] == "sign":
+        sign(sys.argv[2:])
+    else:
         sys.exit(__doc__)
-    make(sys.argv[2])

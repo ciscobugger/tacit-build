@@ -1,8 +1,10 @@
 # Tacit: the key Tacit's packages are signed with, for pacman's keyring (as archlinux-keyring brings Arch's). The master
-# (certify only) is Cloud KMS key tacit/packages-master in YOUR-PROJECT; packages are signed by its subkey
+# (certify only) is Cloud KMS key tacit/packages-master in YOUR-PROJECT; packages are signed by its subkeys
 # (tools/tacit-key). Fingerprint 141AB0375DCEE1F546BCC32294D3C7B496EE6E61.
+# 20261022: adds the second signing subkey F5FC2C996F6A2E7345ACFBDF365AECF9572574AF, Cloud KMS key
+# tacit/packages-signing, which signs once every Tacit computer has this keyring; the first subkey still signs until then.
 pkgname=tacit-keyring
-pkgver=20261016
+pkgver=20261022
 pkgrel=1
 pkgdesc="Tacit: the key Tacit's packages are signed with"
 arch=('any')

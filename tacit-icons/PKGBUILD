@@ -2,13 +2,18 @@
 # Tacit's symbol fonts are part of tacit-shell, which loads them.
 pkgname=tacit-icons
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Tacit: cursor and folder icons"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-icons"
 license=('GPL-3.0-or-later')
 depends=('python' 'tela-circle-icon-theme-purple' 'hicolor-icon-theme')
 makedepends=('git')
+# the system's default cursor is Tacit's: Arch's default-cursors names Adwaita, which X programs (games, Wine) fell back
+# to (Discord 2026-10-22, the cursor changed inside a game); libxcursor and wayland need a default-cursors
+provides=('default-cursors')
+conflicts=('default-cursors')
+replaces=('default-cursors')
 source=("git+https://github.com/ciscobugger/tacit-icons.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
@@ -18,5 +23,6 @@ package() {
 	install -Dm644 dist/cursor/masks.bin "$pkgdir/usr/share/tacit/cursor/masks.bin"
 	install -dm755 "$pkgdir/usr/share/icons"
 	cp -r --no-preserve=ownership dist/icons/Tacit dist/icons/Quiet "$pkgdir/usr/share/icons/"
+	printf '[Icon Theme]\nInherits=Tacit\n' | install -Dm644 /dev/stdin "$pkgdir/usr/share/icons/default/index.theme"
 	find "$pkgdir/usr/share/icons" -type d -exec chmod 755 {} + -o -type f -exec chmod 644 {} +
 }

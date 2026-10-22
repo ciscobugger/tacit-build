@@ -5,6 +5,7 @@
 */agent-host/
 out/
 # makepkg's clones of the git sources, named after each source
+bluez/bluez/
 tacit-device-book4-edge/boot/
 tacit-device-book4-edge/charge/
 tacit-device-book4-edge/port/

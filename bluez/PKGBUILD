@@ -1,0 +1,74 @@
+# Tacit: the Bluetooth daemon with the security fixes BlueZ made after 5.87 and has not released (tacit-security-fixes.patch,
+# 25 upstream commits; among them CVE-2026-80186, CVE-2026-85218, CVE-2026-80185). Arch's bluez recipe at 5.87-2 (Andreas
+# Radke, Robin Candau), the daemon package only: bluez-utils and the rest stay Arch's. Same name, so [tacit] (before
+# [core]) replaces Arch's 5.87-2 on update; remove it from [tacit] once Arch ships a release with these fixes.
+pkgname=bluez
+pkgver=5.87
+pkgrel=2.1
+pkgdesc="Daemons for the bluetooth protocol stack"
+url="http://www.bluez.org/"
+arch=('aarch64' 'x86_64')
+license=('GPL-2.0-only')
+depends=('systemd-libs' 'dbus' 'glib2' 'alsa-lib' 'glibc')
+makedepends=('dbus' 'libical' 'systemd' 'alsa-lib' 'json-c' 'ell' 'python-docutils' 'python-pygments' 'cups' 'git')
+backup=(etc/bluetooth/{main,input,network}.conf)
+source=("git+https://github.com/bluez/bluez.git#tag=$pkgver"
+        bluetooth.modprobe
+        tacit-security-fixes.patch)
+sha256sums=('SKIP'
+            '46c021be659c9a1c4e55afd04df0c059af1f3d98a96338236412e449bf7477b4'
+            'b22d6416b59dbdeea9bf67058885d0ce8f719bcc53353293a5dd8d0fa87e7e29')
+
+prepare() {
+  cd bluez
+  patch -Np1 -i ../tacit-security-fixes.patch
+  autoreconf -vfi
+}
+
+build() {
+  cd bluez
+  # Arch's configuration, so the daemon is built as Arch builds it
+  ICAL_LIBS="-lical -licalvcal" \
+  ./configure \
+          --prefix=/usr \
+          --mandir=/usr/share/man \
+          --sysconfdir=/etc \
+          --localstatedir=/var \
+          --libexecdir=/usr/lib \
+          --with-dbusconfdir=/usr/share \
+          --enable-btpclient \
+          --enable-midi \
+          --enable-sixaxis \
+          --enable-mesh \
+          --enable-hid2hci \
+          --enable-experimental \
+          --enable-datafiles \
+          --enable-external-ell \
+          --enable-library --enable-deprecated
+  make
+  make DESTDIR="$srcdir/fakeinstall" install
+}
+
+check() {
+  cd bluez
+  make check
+}
+
+package() {
+  local f
+  for f in etc/bluetooth/{main,input,network}.conf usr/lib/bluetooth/bluetoothd usr/lib/systemd/system/bluetooth.service \
+           usr/share/dbus-1/system-services/org.bluez.service usr/share/dbus-1/system.d/bluetooth.conf \
+           usr/share/man/man8/bluetoothd.8; do
+    install -d "$pkgdir/${f%/*}"
+    cp -a "$srcdir/fakeinstall/$f" "$pkgdir/$f"
+  done
+  # bluetooth.service wants ConfigurationDirectoryMode=0555
+  chmod 555 "$pkgdir"/etc/bluetooth
+
+  install -dm755 "$pkgdir"/usr/share/doc/bluez/dbus-apis
+  cp -a bluez/doc/*.txt "$pkgdir"/usr/share/doc/bluez/dbus-apis/
+  install -Dm644 bluetooth.modprobe "$pkgdir"/usr/lib/modprobe.d/bluetooth-usb.conf
+  # https://bugzilla.kernel.org/show_bug.cgi?id=196621
+  install -dm755 "$pkgdir"/usr/lib/modules-load.d
+  echo "crypto_user" > "$pkgdir"/usr/lib/modules-load.d/bluez.conf
+}

@@ -1,1 +1,2 @@
 enable tacit-cpu-policy.service
+enable tacit-cpu-policy.path

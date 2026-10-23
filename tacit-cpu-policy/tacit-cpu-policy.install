@@ -1,8 +1,11 @@
 # On by default in Tacit: nobody should have to turn this on.
 post_install() {
-	systemctl preset tacit-cpu-policy.service >/dev/null 2>&1 || true
+	systemd-tmpfiles --create tacit-cpu-policy.conf >/dev/null 2>&1 || true
+	systemctl preset tacit-cpu-policy.service tacit-cpu-policy.path >/dev/null 2>&1 || true
+	systemctl start tacit-cpu-policy.path >/dev/null 2>&1 || true
 	udevadm control --reload-rules >/dev/null 2>&1 || true
 }
+# 0.2.0: the choice made in Settings (the path unit watches it; the file it watches is made here)
 post_upgrade() {
-	udevadm control --reload-rules >/dev/null 2>&1 || true
+	post_install
 }

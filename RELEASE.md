@@ -27,7 +27,8 @@ gates it can; the rest are written here so they are not skipped.
 1. **Gather.** Read Discord since the last release; every report is fixed, answered, or written down for later in
    the release's bug list.
 2. **Pick the day of Arch.** `tools/arch-day` is what installs have now. A newer day is a candidate: build and test
-   with `ARCH_MIRROR=https://archive.archlinux.org/repos/YYYY/MM/DD/$repo/os/$arch`.
+   with `ARCH_MIRROR=https://archive.archlinux.org/repos/YYYY/MM/DD/$repo/os/$arch`. A day with another Hyprland needs
+   tacit-boot and tacit-portal rebuilt on it (their plugins are built for one Hyprland and pin it), or updates refuse.
 3. **Pin.** Each PKGBUILD names the pushed commit or tag it ships; a version that changed gets a new `pkgver` or
    `pkgrel` (never reuse one, even unpublished: a test computer's cache keeps the old file). `tacit/notes.json` leads
    with the release and what changed in it; `tacit` depends on the new versions it needs.

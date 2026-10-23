@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "1.1.3",
+      "date": "2026-10-23",
+      "changes": [
+        "A window you share in a call or in Discord keeps moving when you switch to another workspace or app, instead of freezing on its last frame.",
+        "Settings > Display & power has a power mode for the charger and one for the battery, as on Windows: Fastest, Balanced or Saves battery. The Power mode button in the control panel changes the one in use.",
+        "Windows, the notch and the terminal stay as easy to read on light wallpapers as on dusk: the glass darkens to suit the wallpaper.",
+        "A video or picture on its own in the viewer no longer shows a frame of the desktop around it.",
+        "Thyris: Ctrl and the scroll wheel, or a pinch on the touchpad, zoom the page.",
+        "Thyris: when a pinned site has moved off the page you pinned, that page shows under Pinned, and the home button there takes it back.",
+        "VS Code, LibreOffice and other apps from Apps can open your files and USB drives, and an app that needs an update before it installs says so instead of failing.",
+        "Emoji show in the emoji picker (Super+.) and the launcher on new accounts.",
+        "Files shows thumbnails of new pictures and of videos.",
+        "The music icon in the notch brings Thyris forward when Thyris is playing.",
+        "Settings shows previews of wallpapers whose names have #, ? or % in them, and saves a new wallpaper at once, so a restart right after keeps it."
+      ]
+    },
+    {
       "version": "1.1.2",
       "date": "2026-10-22",
       "changes": [

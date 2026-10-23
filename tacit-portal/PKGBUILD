@@ -1,14 +1,17 @@
 # Tacit: the desktop portal - file dialogs and Open with through Files, the keyring prompt and the screen share
 # picker as Tacit sheets. The sheets themselves are part of tacit-shell.
 pkgname=tacit-portal
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
-pkgdesc="Tacit: file dialogs, Open with, keyring prompt and share picker"
+pkgdesc="Tacit: file dialogs, Open with, keyring prompt, share picker and live window shares"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-portal"
 license=('GPL-3.0-or-later')
-depends=('qt6-base' 'gcr' 'glib2' 'json-glib' 'xdg-desktop-portal' 'python')
-makedepends=('cmake' 'git')
+# tacit-share.so (the window a share shows keeps drawing off screen) is built for one Hyprland version and refused by any
+# other: pin the one it was built against, as tacit-boot does, so Hyprland only moves when this package is rebuilt with it
+_hyprver=$(pkg-config --modversion hyprland 2>/dev/null)
+depends=('qt6-base' 'gcr' 'glib2' 'json-glib' 'xdg-desktop-portal' 'python' "hyprland=${_hyprver:-0}")
+makedepends=('cmake' 'git' 'hyprland' 'pixman' 'libdrm' 'pkgconf')
 source=("git+https://github.com/ciscobugger/tacit-portal.git#tag=v$pkgver")
 sha256sums=('SKIP')
 options=('!debug')
@@ -18,6 +21,7 @@ build() {
 	cmake -B build -DCMAKE_BUILD_TYPE=Release
 	cmake --build build --target tacit-portal
 	make -C keyring-prompter
+	make -C share-plugin
 }
 
 package() {
@@ -33,4 +37,5 @@ package() {
 	install -Dm644 packaging/org.gnome.keyring.SystemPrompter.service packaging/org.gnome.keyring.PrivatePrompter.service \
 		-t "$pkgdir/usr/share/tacit/dbus-1/services/"
 	install -Dm755 share-picker/tacit-share-picker -t "$pkgdir/usr/bin/"
+	install -Dm755 share-plugin/tacit-share.so -t "$pkgdir/usr/lib/tacit/hyprland/"
 }

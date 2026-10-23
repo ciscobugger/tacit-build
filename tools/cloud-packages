@@ -43,9 +43,10 @@ for p in "$@"; do
 	if [ -n "$theirs" ] && ! pacman -S --noconfirm --needed $theirs > /work/new/$p.deps.log 2>&1; then
 		echo "   FAILED: its needs ($(grep -m1 'error' /work/new/$p.deps.log))"; continue
 	fi
-	# ours without their own needs (makepkg builds with --nodeps; tacit-shell's fonts and icons are not wanted here)
+	# ours without their own needs (makepkg builds with --nodeps; tacit-shell's fonts and icons are not wanted here).
+	# --ask=4 lets one of ours replace the Arch package it conflicts with, as on installs (tacit-icons, default-cursors)
 	files=$(for d in $ours; do ls -t /work/new/$d-[0-9]*.pkg.tar.zst /work/have/$d-[0-9]*.pkg.tar.zst 2>/dev/null | head -1 || true; done)
-	if [ -n "$files" ] && ! pacman -U --noconfirm --needed -dd $files > /work/new/$p.ours.log 2>&1; then
+	if [ -n "$files" ] && ! pacman -U --noconfirm --ask=4 --needed -dd $files > /work/new/$p.ours.log 2>&1; then
 		echo "   FAILED: ours ($(grep -m1 'error' /work/new/$p.ours.log))"; continue
 	fi
 	chown -R builder /work/$p

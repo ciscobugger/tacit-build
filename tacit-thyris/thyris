@@ -31,4 +31,10 @@ if [ -n "$(find "$ext/ubol/manifest.json" -mtime +6 2>/dev/null)" ] && [ ! -d "$
     ( (XDG_DATA_HOME=$fetch timeout 120 "$lib/update-ubol" >/dev/null 2>&1 && mv "$fetch/browser/extensions/ubol" "$ext/ubol.next"
        rm -rf "$fetch") & )
 fi
-exec "$lib/browser" "$@"
+# What the browser and its engine say goes to a log, so a report of a hang or a crash can come with it; past 1 MB it
+# keeps its last 500 KB (as tacit-app's logs)
+log=${XDG_CACHE_HOME:-$HOME/.cache}/thyris.log
+mkdir -p "${log%/*}"
+[ "$(stat -c %s "$log" 2>/dev/null || echo 0)" -gt 1000000 ] && { tail -c 500000 "$log" > "$log.trim" && mv "$log.trim" "$log"; }
+echo "--- $(date '+%F %T') thyris $*" >> "$log"
+exec "$lib/browser" "$@" >> "$log" 2>&1

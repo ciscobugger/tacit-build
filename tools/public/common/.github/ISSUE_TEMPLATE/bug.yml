@@ -1,0 +1,39 @@
+name: Bug
+description: Something in Tacit does not work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: What to do to see it happen, one step per line.
+      placeholder: |
+        1. Open Settings › Display & power
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Tacit version
+      description: Settings › About
+      placeholder: "1.1.3"
+    validations:
+      required: true
+  - type: input
+    id: computer
+    attributes:
+      label: Computer
+      description: Its make and model, and the graphics if you know them.
+  - type: textarea
+    id: pictures
+    attributes:
+      label: Screenshot, recording or log
+      description: Drag files in here.

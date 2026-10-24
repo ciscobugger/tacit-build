@@ -34,6 +34,10 @@ fill() {
         grep -o 'docs/[A-Za-z0-9._-]*' "$w/README.md" | while read -r f; do mkdir -p "$w/docs"; cp "$public/$f" "$w/$f"; done
     fi
     [ -e "$w/README.md" ] || printf '%s\n' "$readme" > "$w/README.md"
+    # what every public repo has for contributors (tools/public/common: CONTRIBUTING.md, the issue forms, the pull
+    # request template and its sign-off check), the issue forms pointing at this repo's own security form
+    cp -r "$public/common/." "$w/"
+    sed -i "s|{repo}|$me/$name|g" "$w/.github/ISSUE_TEMPLATE/config.yml"
     grep -rlI --null --exclude-dir=.git "$project" "$w" | xargs -0 -r sed -i "s/$project/YOUR-PROJECT/g"
 }
 
@@ -64,26 +68,44 @@ publish() {
         git -C "$w" add -A
         last=$c
         git -C "$w" diff --cached --quiet && continue    # nothing that is published changed
+        # a commit taken from a public pull request (tools/take-pr: it carries "Public-PR:") keeps its author, the
+        # contributor; every other commit is Tacit's
+        local an=Tacit ae=$email
+        if git -C "$src" log -1 --format=%B "$c" | grep -q '^Public-PR: '; then
+            an=$(git -C "$src" log -1 --format=%an "$c"); ae=$(git -C "$src" log -1 --format=%ae "$c")
+        fi
+        GIT_AUTHOR_NAME=$an GIT_AUTHOR_EMAIL=$ae \
         GIT_AUTHOR_DATE=$(git -C "$src" log -1 --format=%aI "$c") GIT_COMMITTER_DATE=$(git -C "$src" log -1 --format=%cI "$c") \
             git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -F - <<<"$msg"
         n=$((n + 1))
     done
-    # the public README or its pictures changed with no new commit of the part: that change on its own
+    # the public README, its pictures or the contributor files changed with no new commit of the part: that change alone
     if [ "$n" = 0 ]; then
         fill "$w" "$src" "$last"
         git -C "$w" add -A
         if ! git -C "$w" diff --cached --quiet; then
-            git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -m "README updated"
+            git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -m "Public README and contributor files updated"
             n=1
         fi
     fi
     git -C "$w" branch -M main
     if [ -n "${DRY:-}" ]; then
         echo "$name: $n commits made in $w (DRY: nothing pushed)"
-        git -C "$w" log --format='  %ad  %s' --date=short "origin/main..main" | cut -c1-150
+        git -C "$w" log --format='  %ad  %an  %s' --date=short "origin/main..main" | cut -c1-150
+        git -C "$w" log --format='%(trailers:key=Public-PR,valueonly,separator=)' "origin/main..main" | grep . | sort -u | sed 's/^/  would close /' || true
         return
     fi
+    # the pull requests these commits came from, each with its public commits
+    local prs
+    prs=$(git -C "$w" log --reverse --format='%(trailers:key=Public-PR,valueonly,separator=)%x09%H' origin/main..main | grep -v '^\s' || true)
     [ "$n" -gt 0 ] && git -C "$w" push -q origin main
+    for pr in $(cut -f1 <<<"$prs" | grep "^$me/$name#" | sort -u); do
+        local links
+        links=$(grep -F "$pr"$'\t' <<<"$prs" | cut -f2 | sed "s|^|https://github.com/$me/$name/commit/|")
+        gh pr comment "${pr#*#}" -R "$me/$name" --body "$(printf 'Thank you. This is in Tacit now, under your name:\n\n%s\n\nIt ships in the next release.' "$links")" >/dev/null
+        gh pr close "${pr#*#}" -R "$me/$name" >/dev/null
+        echo "$name: closed $pr with its commits"
+    done
     if [ -n "$version" ] && ! git -C "$w" rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
         git -C "$w" -c user.name=Tacit -c user.email="$email" tag -a "v$version" -m "Tacit $version"
         git -C "$w" push -q origin "v$version"

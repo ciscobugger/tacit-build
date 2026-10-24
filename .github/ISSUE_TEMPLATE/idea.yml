@@ -1,0 +1,23 @@
+name: Idea
+description: A new feature, or a change to how Tacit looks or works
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Ideas are talked through here before anyone builds them. A mock or a screenshot helps.
+  - type: textarea
+    id: want
+    attributes:
+      label: What you want to do
+      description: The job, rather than the button you imagine for it.
+    validations:
+      required: true
+  - type: textarea
+    id: now
+    attributes:
+      label: How you do it today
+      description: The workaround, or why there is none.
+  - type: textarea
+    id: pictures
+    attributes:
+      label: Mock, screenshot or example

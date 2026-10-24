@@ -1,0 +1,58 @@
+#!/bin/bash
+# tools/take-pr <tacit|thyris|tacit-build> <number>: a pull request on one of Tacit's public repos, onto the review branch
+# pr/<repo>-<number> of the private repo it is published from. Its commits keep their author and message and get a
+# "Public-PR: <owner>/<repo>#<number>" line; tools/publish-source publishes them under the contributor's name and then
+# closes the pull request with links to them (CONTRIBUTING.md, in tools/public/common).
+#
+# It refuses a commit without its author's sign-off (the DCO) and a change to the files only the public repos have
+# (README, CONTRIBUTING, LICENSE, .github, docs): those come from tools/public. Nothing is merged and the private repo's
+# working tree is not touched (the shell's is the running desktop): the commits are applied in a worktree. Then read
+# every line, test it, and bring the branch into main: git merge --ff-only pr/<repo>-<number> where main has not moved,
+# else git rebase main pr/<repo>-<number> first.
+# Never merge a pull request on GitHub: the next publish rebuilds the public repo from the private one and it is lost.
+set -eu
+repo=${1:-} n=${2:-}
+[ -n "$repo" ] && [ -n "$n" ] || { echo "usage: tools/take-pr <tacit|thyris|tacit-build> <number>" >&2; exit 2; }
+case $repo in
+    tacit) src=$HOME/.config/quickshell/tacit ;;
+    thyris) src=$HOME/dev/browser ;;
+    tacit-build) src=$HOME/dev/tacit-packages ;;
+    *) echo "take-pr: $repo is not one of Tacit's public repos" >&2; exit 2 ;;
+esac
+me=$(gh api user -q .login)
+state=$(gh pr view "$n" -R "$me/$repo" --json state -q .state)
+[ "$state" = OPEN ] || { echo "take-pr: $me/$repo#$n is $state" >&2; exit 1; }
+branch=pr/$repo-$n
+git -C "$src" rev-parse -q --verify "refs/heads/$branch" >/dev/null && { echo "take-pr: $branch is there already" >&2; exit 1; }
+tmp=$(mktemp -d); trap 'git -C "$src" worktree remove --force "$tmp/wt" 2>/dev/null || true; rm -rf "$tmp"' EXIT
+
+# the public history the pull request was made on, and its commits
+git clone -q "https://github.com/$me/$repo.git" "$tmp/pub"
+git -C "$tmp/pub" fetch -q origin "pull/$n/head:pr"
+base=$(git -C "$tmp/pub" merge-base main pr)
+commits=$(git -C "$tmp/pub" rev-list --reverse --no-merges "$base..pr")
+[ -n "$commits" ] || { echo "take-pr: #$n has no commits" >&2; exit 1; }
+for c in $commits; do
+    author=$(git -C "$tmp/pub" log -1 --format='%an <%ae>' "$c")
+    git -C "$tmp/pub" log -1 --format=%B "$c" | grep -qF "Signed-off-by: $author" \
+        || { echo "take-pr: $(git -C "$tmp/pub" log -1 --format='%h %s' "$c") is not signed off by $author" >&2; exit 1; }
+done
+public_only=$(git -C "$tmp/pub" diff --name-only "$base" pr | grep -E '^(README\.md|DEVELOPING\.md|CONTRIBUTING\.md|LICENSE|\.github/|docs/)' || true)
+[ -z "$public_only" ] || { printf 'take-pr: #%s changes files made by tools/public; apply those by hand:\n%s\n' "$n" "$public_only" >&2; exit 1; }
+
+# onto the private repo's HEAD in a worktree, committed as the private repo's last committer
+git -C "$tmp/pub" format-patch -q -o "$tmp/patches" "$base..pr"
+git -C "$src" worktree add -q -b "$branch" "$tmp/wt" HEAD
+export GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+GIT_COMMITTER_NAME=$(git -C "$src" log -1 --format=%cn) GIT_COMMITTER_EMAIL=$(git -C "$src" log -1 --format=%ce)
+if ! git -C "$tmp/wt" am -q -3 "$tmp"/patches/*.patch; then
+    git -C "$tmp/wt" am --abort 2>/dev/null || true
+    git -C "$src" worktree remove --force "$tmp/wt"; git -C "$src" branch -q -D "$branch"
+    echo "take-pr: #$n does not apply to the private repo's HEAD; nothing was kept" >&2
+    exit 1
+fi
+k=$(wc -w <<<"$commits")
+git -C "$tmp/wt" rebase -q --exec "git commit -q --amend --no-edit --trailer 'Public-PR: $me/$repo#$n'" "HEAD~$k"
+echo "$branch in $src:"
+git -C "$src" log --format='  %h  %an  %s' "HEAD..$branch" | cut -c1-150
+git -C "$src" diff --stat "HEAD...$branch" | tail -1

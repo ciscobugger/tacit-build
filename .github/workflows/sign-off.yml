@@ -1,0 +1,26 @@
+# Every commit of a pull request carries its author's Signed-off-by line (CONTRIBUTING.md, the DCO).
+name: Sign-off
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  sign-off:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Each commit is signed off by its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          missing=0
+          for c in $(git rev-list --no-merges "$BASE..HEAD"); do
+            author="$(git log -1 --format='%an <%ae>' "$c")"
+            if ! git log -1 --format=%B "$c" | grep -qF "Signed-off-by: $author"; then
+              echo "::error::$(git log -1 --format='%h %s' "$c"): no 'Signed-off-by: $author'. Sign it off with git commit -s (git commit --amend -s for the last one)."
+              missing=1
+            fi
+          done
+          exit $missing

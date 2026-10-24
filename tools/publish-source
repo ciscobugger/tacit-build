@@ -38,6 +38,11 @@ fill() {
     # request template and its sign-off check), the issue forms pointing at this repo's own security form
     cp -r "$public/common/." "$w/"
     sed -i "s|{repo}|$me/$name|g" "$w/.github/ISSUE_TEMPLATE/config.yml"
+    # what coding agents read first (tools/public/agents/<name>.md), and a CLAUDE.md that points Claude Code at it
+    if [ -f "$public/agents/$name.md" ]; then
+        cp "$public/agents/$name.md" "$w/AGENTS.md"
+        printf '@AGENTS.md\n' > "$w/CLAUDE.md"
+    fi
     grep -rlI --null --exclude-dir=.git "$project" "$w" | xargs -0 -r sed -i "s/$project/YOUR-PROJECT/g"
 }
 

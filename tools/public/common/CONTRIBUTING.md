@@ -25,18 +25,21 @@ Security problems go to **Report a vulnerability** on this repo's Security tab, 
   [thyris](https://github.com/ciscobugger/thyris) (the browser) and
   [tacit-build](https://github.com/ciscobugger/tacit-build) (packages, installer, ISO). The other parts of Tacit are
   not public yet.
-- Building and running a part: DEVELOPING.md in its repo.
+- Building and running a part: DEVELOPING.md in its repo. Working with an AI agent? Point it at AGENTS.md, which
+  tells it the layout, the checks and the rules.
 
 ## How a pull request gets in
 
 These repos are published from the ones Tacit is developed in, so a pull request is not merged here. Instead:
 
-1. Every line is read. Tacit's packages run with full access to everyone's computer, so nothing goes in unread or
+1. Checks run on it at once: every commit signed off, and the scripts, Python, Lua, JSON and YAML it changes read
+   without errors. Fix what they report.
+2. Every line is read. Tacit's packages run with full access to everyone's computer, so nothing goes in unread or
    automatically.
-2. Your commits are applied to Tacit's working repo as they are, with you as their author.
-3. They reach this repo with the next publish, under your name, and your pull request is closed with a link to them.
+3. Your commits are applied to Tacit's working repo as they are, with you as their author.
+4. They reach this repo with the next publish, under your name, and your pull request is closed with a link to them.
    GitHub shows it as closed rather than merged; the commits are yours.
-4. They ship in the next Tacit release.
+5. They ship in the next Tacit release.
 
 ## Sign off your commits
 

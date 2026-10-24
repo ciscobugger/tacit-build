@@ -1,0 +1,37 @@
+# The files a pull request changes, checked the way Tacit's own work is (RELEASE.md): shell scripts and package recipes
+# with bash -n, Python compiled, Lua parsed, JSON and YAML read, and no Windows line endings (a CRLF script fails to
+# start). Each problem is reported on its file.
+name: Checks
+on: pull_request
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Tools
+        run: sudo apt-get install -y -qq lua5.4 > /dev/null
+      - name: The changed files
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          failed=0
+          bad() { echo "::error file=$1::$2"; failed=1; }
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            if grep -Iq $'\r' "$f"; then bad "$f" "Windows line endings (CRLF): save it with LF"; fi
+            first=$(head -c 64 "$f" | head -n 1)
+            case "$f" in
+              *.py) python3 -m py_compile "$f" 2> /tmp/out || bad "$f" "$(tail -n 1 /tmp/out)" ;;
+              *.lua) luac5.4 -p "$f" 2> /tmp/out || bad "$f" "$(cat /tmp/out)" ;;
+              *.json) python3 -m json.tool "$f" > /dev/null 2> /tmp/out || bad "$f" "$(cat /tmp/out)" ;;
+              *.yml|*.yaml) python3 -c 'import sys, yaml; yaml.safe_load(open(sys.argv[1]))' "$f" 2> /tmp/out || bad "$f" "$(tail -n 1 /tmp/out)" ;;
+              *.sh|*/PKGBUILD|PKGBUILD|*.install) bash -n "$f" 2> /tmp/out || bad "$f" "$(cat /tmp/out)" ;;
+              *) case "$first" in '#!'*bash*|'#!'*/sh*) bash -n "$f" 2> /tmp/out || bad "$f" "$(cat /tmp/out)" ;; esac ;;
+            esac
+          done < <(git diff --name-only --diff-filter=AM "$BASE" HEAD)
+          exit $failed

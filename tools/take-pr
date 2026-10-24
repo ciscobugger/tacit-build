@@ -5,10 +5,10 @@
 # closes the pull request with links to them (CONTRIBUTING.md, in tools/public/common).
 #
 # It refuses a commit without its author's sign-off (the DCO) and a change to the files only the public repos have
-# (README, CONTRIBUTING, LICENSE, .github, docs): those come from tools/public. Nothing is merged and the private repo's
-# working tree is not touched (the shell's is the running desktop): the commits are applied in a worktree. Then read
-# every line, test it, and bring the branch into main: git merge --ff-only pr/<repo>-<number> where main has not moved,
-# else git rebase main pr/<repo>-<number> first.
+# (README, CONTRIBUTING, AGENTS, CLAUDE, LICENSE, .github, docs): those come from tools/public. Nothing is merged and the
+# private repo's working tree is not touched (the shell's is the running desktop): the commits are applied in a worktree.
+# Then read every line, test it, and bring the branch into main: git merge --ff-only pr/<repo>-<number> where main has
+# not moved, else git rebase main pr/<repo>-<number> first.
 # Never merge a pull request on GitHub: the next publish rebuilds the public repo from the private one and it is lost.
 set -eu
 repo=${1:-} n=${2:-}
@@ -37,7 +37,7 @@ for c in $commits; do
     git -C "$tmp/pub" log -1 --format=%B "$c" | grep -qF "Signed-off-by: $author" \
         || { echo "take-pr: $(git -C "$tmp/pub" log -1 --format='%h %s' "$c") is not signed off by $author" >&2; exit 1; }
 done
-public_only=$(git -C "$tmp/pub" diff --name-only "$base" pr | grep -E '^(README\.md|DEVELOPING\.md|CONTRIBUTING\.md|LICENSE|\.github/|docs/)' || true)
+public_only=$(git -C "$tmp/pub" diff --name-only "$base" pr | grep -E '^(README\.md|DEVELOPING\.md|CONTRIBUTING\.md|AGENTS\.md|CLAUDE\.md|LICENSE|\.github/|docs/)' || true)
 [ -z "$public_only" ] || { printf 'take-pr: #%s changes files made by tools/public; apply those by hand:\n%s\n' "$n" "$public_only" >&2; exit 1; }
 
 # onto the private repo's HEAD in a worktree, committed as the private repo's last committer

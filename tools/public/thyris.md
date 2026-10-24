@@ -12,3 +12,8 @@ It comes with [Tacit](https://tacitos.co); this repository is its source. It's m
 Embedded Framework.
 
 Licence: GPL-3.0
+
+## Contributing
+
+Bug reports, fixes, translations and support for more computers are welcome: open an issue, or read
+[CONTRIBUTING.md](CONTRIBUTING.md) before sending a pull request. Questions go to [Discord](https://discord.gg/Geg72FUhY).

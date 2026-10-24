@@ -32,6 +32,11 @@ The desktop and its apps. The browser is in [thyris](https://github.com/ciscobug
 and installer are made is in [tacit-build](https://github.com/ciscobugger/tacit-build). To build and run the desktop
 yourself, see [DEVELOPING.md](DEVELOPING.md).
 
+## Contributing
+
+Bug reports, fixes, translations and support for more computers are welcome: open an issue, or read
+[CONTRIBUTING.md](CONTRIBUTING.md) before sending a pull request. Questions go to [Discord](https://discord.gg/Geg72FUhY).
+
 ## Thanks
 
 Tacit is built on Arch Linux, Hyprland and Quickshell. Its desktop began as a fork of

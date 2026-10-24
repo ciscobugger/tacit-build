@@ -1,6 +1,13 @@
 {
   "releases": [
     {
+      "version": "1.1.4",
+      "date": "2026-10-24",
+      "changes": [
+        "Logging out brings back the sign-in screen. It left a black screen until the computer was restarted."
+      ]
+    },
+    {
       "version": "1.1.3",
       "date": "2026-10-23",
       "changes": [

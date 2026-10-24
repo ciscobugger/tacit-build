@@ -8,6 +8,7 @@
         "Setup on the stick no longer waits forever for a Wi-Fi network that doesn't answer.",
         "Setup on the stick has Try Tacit first: it closes Setup so you can try Tacit without installing it. Install Tacit in the launcher opens Setup again.",
         "Apps shows how many updates an app that needs them first brings with it. It said 0.",
+        "A file dropped on the notch shows at the front of the shelf. Once the shelf held more than four, a new file only changed the count.",
         "When something fails, Tacit says what happened in plain words: Wi-Fi that can't join, Praxis when its background service is away, and the desktop or Dictation when it stops.",
         "Settings > Updates keeps the time of the last check up to date while the page is open."
       ]

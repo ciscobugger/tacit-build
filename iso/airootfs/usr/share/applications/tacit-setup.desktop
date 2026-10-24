@@ -1,0 +1,11 @@
+[Desktop Entry]
+# Tacit's live system only (tacit-install removes the image's own files): Setup again after "Try Tacit first" closed it;
+# -n leaves the one already open alone
+Name=Install Tacit
+Comment=Put Tacit on this computer
+Keywords=install;setup;tacit;usb;stick;
+Exec=qs -n -p /usr/share/tacit/shell/setup.qml
+Icon=drive-removable-media
+Terminal=false
+Type=Application
+Categories=System;

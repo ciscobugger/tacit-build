@@ -16,7 +16,7 @@ depends=("tacit-cef=$_cef" 'qt6-base' 'qt6-declarative' 'qt6-webchannel' 'qt6-we
 optdepends=('hunspell-en_gb: spell check in British English'
             'hunspell-en_us: spell check in American English')
 makedepends=("tacit-cef-sdk=$_cef" 'cmake' 'ninja' 'git' 'rust' 'qt6-shadertools' 'patchelf')
-source=("git+https://github.com/ciscobugger/tacit-opsis.git#commit=f7d59aa56c9e728639ea57e92b6476b647103bfd"
+source=("git+https://github.com/ciscobugger/tacit-opsis.git#commit=1d42e033bcd6744518d12e8a3aab4f7bb613b628"
         'thyris' 'thyris.desktop')
 sha256sums=('SKIP' 'SKIP' 'SKIP')
 options=('!debug')

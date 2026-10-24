@@ -1,6 +1,14 @@
 {
   "releases": [
     {
+      "version": "1.1.6",
+      "date": "2026-10-24",
+      "changes": [
+        "Thyris fills its window on a screen set to 125 %, 150 % or 200 %. On those screens a page was drawn in the top left of the window, with a dark band beside and below it.",
+        "Praxis shows commands and what they printed as written. A command with HTML in it was drawn as formatted text and spilled over the steps around it."
+      ]
+    },
+    {
       "version": "1.1.5",
       "date": "2026-10-24",
       "changes": [

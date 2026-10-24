@@ -2,7 +2,7 @@
 # and win), the lock, idle and screen share settings, the "Tacit" session and Tacit's login screen.
 pkgname=tacit-session
 pkgver=0.2.1
-pkgrel=31
+pkgrel=32
 pkgdesc="Tacit: the Hyprland session"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -17,12 +17,9 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
          'plasma-integration'
          # updates without a password for these two actions (updates/50-tacit-updates.rules)
          'polkit')
-# the sign-in screen asks Qt for layer-shell (sddm/tacit.conf): without it the greeter aborted at once and Log out left
-# a black screen on every install (the 2026-10-24 VM test); the owner's Book4 had it installed by hand
-depends+=('layer-shell-qt')
 makedepends=('git')
 install=tacit-session.install
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=daf57c0dd0b5c2ceb6aeed1fd02f811afa26063e")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=353f0480550a91bca07734ecc890af11d5d35c10")
 sha256sums=('SKIP')
 
 package() {

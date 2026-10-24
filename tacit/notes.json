@@ -1,6 +1,18 @@
 {
   "releases": [
     {
+      "version": "1.1.7",
+      "date": "2026-10-24",
+      "changes": [
+        "Activity shows the apps still running after you close their window, under In the background. Quit ends one; an app with a tray icon, like Discord or Steam, also has Open. Activity opens again: since 1.1.2 it did not start.",
+        "Apps like Discord and Steam keep their tray icon, so they can run in the background as they do elsewhere.",
+        "Thyris opens even when an earlier Thyris has stopped answering: the stuck one is closed and a new one starts with your pages.",
+        "A page that stops answering in Thyris says so, with Wait and Reload, and the rest of Thyris keeps working.",
+        "When an app stops answering, Close it in the notch closes it for sure, and the notch clears once the app is gone.",
+        "Thyris: Settings, Find on this page and Reader view show their symbols instead of words."
+      ]
+    },
+    {
       "version": "1.1.6",
       "date": "2026-10-24",
       "changes": [

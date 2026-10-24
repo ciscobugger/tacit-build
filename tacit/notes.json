@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "1.1.8",
+      "date": "2026-10-24",
+      "changes": [
+        "When your settings file has a mistake in it, Tacit says so once, not again and again, and offers to put back the last good copy.",
+        "While that file can't be read, Settings says that changes aren't saved, with Restore. Changes used to look saved and were lost.",
+        "A wallpaper that can't be shown is reported once, not once for each screen."
+      ]
+    },
+    {
       "version": "1.1.7",
       "date": "2026-10-24",
       "changes": [

@@ -25,7 +25,7 @@ Security problems go to **Report a vulnerability** on this repo's Security tab, 
   [thyris](https://github.com/ciscobugger/thyris) (the browser),
   [tacit-build](https://github.com/ciscobugger/tacit-build) (packages, installer, ISO),
   [tacit-kit](https://github.com/ciscobugger/tacit-kit) (the design kit; its guide is
-  [tacitos.co/design](https://tacitos.co/design)) and
+  [design.tacitos.co](https://design.tacitos.co)) and
   [tacit-music-example](https://github.com/ciscobugger/tacit-music-example) (an example app to build on). The other
   parts of Tacit are not public yet.
 - Building and running a part: DEVELOPING.md in its repo. Working with an AI agent? Point it at AGENTS.md, which

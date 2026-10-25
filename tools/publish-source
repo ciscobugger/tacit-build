@@ -158,7 +158,7 @@ publish "$HOME/dev/tacit-packages" tacit-build \
     "# tacit-build"
 # the design kit and its example app (public since 2026-10-25, the owner's go)
 publish "$HOME/dev/tacit-kit" tacit-kit \
-    "Tacit.Kit: the parts Tacit's apps are made of, a QML module for Quickshell apps; the guide is tacitos.co/design" \
+    "Tacit.Kit: the parts Tacit's apps are made of, a QML module for Quickshell apps; the guide is design.tacitos.co" \
     "# Tacit Kit"
 publish "$HOME/dev/tacit-music-example" tacit-music-example \
     "A music player made only of Tacit.Kit's parts: an example to build your own app on" \

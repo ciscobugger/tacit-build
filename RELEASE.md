@@ -22,6 +22,16 @@ gates it can; the rest are written here so they are not skipped.
 4. **Say what the person sees.** Release notes, the notch and Settings speak in plain words: no package names, no
    commands.
 
+## Version numbers
+
+Owner, 2026-10-25: the numbers follow how a release reaches people, not how many there have been.
+
+- **A fix between weekly releases** bumps the last number: 1.2 -> 1.2.1 -> 1.2.2. After .9 comes .10, never a rollover.
+- **The weekly release** bumps the middle number: 1.2, 1.3, 1.4. It carries the release notes and the Discord post.
+- **2.0** comes when its content is done (nothing broken, everything findable, one design language, Tacit's own
+  foundations, Thyris complete, easy to try), whatever the middle number has reached by then. Never by count.
+- The ISO keeps its dated name (2026.10.24.1).
+
 ## A release
 
 1. **Gather.** Read Discord since the last release; every report is fixed, answered, or written down for later in

@@ -1,0 +1,23 @@
+# Tacit: Tacit.Kit, the parts Tacit's apps are made of, for anyone making an app for Tacit (a QML module for
+# Quickshell apps). Installed where Qt finds it without an import path. The tokens follow the user's wallpaper
+# (Live.qml reads the palette the shell generates).
+pkgname=tacit-kit
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Tacit: the design kit (Tacit.Kit QML module) for Tacit apps"
+arch=('any')
+url="https://github.com/ciscobugger/tacit-kit"
+license=('LGPL-3.0-or-later')
+depends=('quickshell' 'qt6-declarative')
+makedepends=('git')
+source=("git+https://github.com/ciscobugger/tacit-kit.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+package() {
+	cd tacit-kit
+	install -d "$pkgdir/usr/lib/qt6/qml/Tacit/Kit"
+	cp -r qml/Tacit/Kit/. "$pkgdir/usr/lib/qt6/qml/Tacit/Kit/"
+	install -Dm644 LICENSE COPYING.GPL-3 -t "$pkgdir/usr/share/licenses/$pkgname"
+	install -Dm644 README.md CHANGELOG.md -t "$pkgdir/usr/share/doc/$pkgname"
+	install -Dm755 tools/lint.py "$pkgdir/usr/bin/tacit-kit-lint"
+}

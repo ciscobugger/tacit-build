@@ -8,7 +8,8 @@
 #
 # Which private commit each public repo has reached: ~/.config/tacit-packages/public-sources ("<public name> <sha>"),
 # the private side's record. The private repos stay the working ones.
-# DRY=1: the public commits are made in a local copy, shown, and neither pushed nor recorded.
+# DRY=1: the public commits are made in a local copy, shown, and neither pushed nor recorded; a repo not yet on
+# GitHub is not created. ONLY=<public name> publishes just that repo.
 set -eu
 version=${1:-}
 me=$(gh api user -q .login)
@@ -49,15 +50,39 @@ fill() {
 publish() {
     local src=$1 desc=$3
     name=$2 readme=$4
-    gh repo view "$me/$name" >/dev/null 2>&1 \
-        || gh repo create "$me/$name" --public --description "$desc" --homepage https://tacitos.co >/dev/null
-    local base w n=0 last
+    [ -z "${ONLY:-}" ] || [ "$ONLY" = "$name" ] || return 0    # ONLY=<public name>: just that repo
+    local base w n=0 last first=
     base=$(sed -n "s/^$name //p" "$state" 2>/dev/null)
-    [ -n "$base" ] || { echo "publish-source: $state names no private commit $name has reached" >&2; exit 1; }
     w=$(mktemp -d)
-    git clone -q "https://github.com/$me/$name.git" "$w" 2>/dev/null
+    if gh repo view "$me/$name" >/dev/null 2>&1; then
+        [ -n "$base" ] || { echo "publish-source: $state names no private commit $name has reached" >&2; exit 1; }
+        git clone -q "https://github.com/$me/$name.git" "$w" 2>/dev/null
+    else
+        # a repo published for the first time: made only when this is not a dry run (DRY never creates anything on
+        # GitHub), and its first public commit is one clean copy of the private repo as it is now
+        [ -n "${DRY:-}" ] || gh repo create "$me/$name" --public --description "$desc" --homepage https://tacitos.co >/dev/null
+        git -C "$w" init -q
+        git -C "$w" remote add origin "https://github.com/$me/$name.git"
+        base=$(git -C "$src" rev-parse HEAD)
+        first=1
+    fi
     last=$base
-    for c in $(git -C "$src" rev-list --reverse --first-parent "$base..HEAD"); do
+    if [ -n "$first" ]; then
+        fill "$w" "$src" "$base"
+        if grep -rqI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w"; then
+            echo "publish-source: $name still names the owner's address or cloud project; nothing pushed" >&2
+            grep -rlI --exclude-dir=.git -e "$owner_mail" -e "$project" "$w" >&2 || true
+            exit 1
+        fi
+        if git -C "$src" grep -qE "$keys" "$base" -- . 2>/dev/null; then
+            echo "publish-source: $name has what looks like a key; nothing pushed" >&2
+            exit 1
+        fi
+        git -C "$w" add -A
+        git -C "$w" -c user.name=Tacit -c user.email="$email" commit -q -m "$name, first public version"
+        n=1
+    fi
+    for c in $( [ -n "$first" ] || git -C "$src" rev-list --reverse --first-parent "$base..HEAD"); do
         fill "$w" "$src" "$c"
         local msg
         msg=$(git -C "$src" log -1 --format=%B "$c" | sed "s/$project/YOUR-PROJECT/g")
@@ -94,16 +119,18 @@ publish() {
         fi
     fi
     git -C "$w" branch -M main
+    local range=origin/main..main
+    [ -n "$first" ] && range=main
     if [ -n "${DRY:-}" ]; then
-        echo "$name: $n commits made in $w (DRY: nothing pushed)"
-        git -C "$w" log --format='  %ad  %an  %s' --date=short "origin/main..main" | cut -c1-150
-        git -C "$w" log --format='%(trailers:key=Public-PR,valueonly,separator=)' "origin/main..main" | grep . | sort -u | sed 's/^/  would close /' || true
+        echo "$name: $n commits made in $w (DRY: nothing created or pushed)"
+        git -C "$w" log --format='  %ad  %an  %s' --date=short "$range" | cut -c1-150
+        git -C "$w" log --format='%(trailers:key=Public-PR,valueonly,separator=)' "$range" | grep . | sort -u | sed 's/^/  would close /' || true
         return
     fi
     # the pull requests these commits came from, each with its public commits
     local prs
-    prs=$(git -C "$w" log --reverse --format='%(trailers:key=Public-PR,valueonly,separator=)%x09%H' origin/main..main | grep -v '^\s' || true)
-    [ "$n" -gt 0 ] && git -C "$w" push -q origin main
+    prs=$(git -C "$w" log --reverse --format='%(trailers:key=Public-PR,valueonly,separator=)%x09%H' "$range" | grep -v '^\s' || true)
+    [ "$n" -gt 0 ] && git -C "$w" push -q -u origin main
     for pr in $(cut -f1 <<<"$prs" | grep "^$me/$name#" | sort -u); do
         local links
         links=$(grep -F "$pr"$'\t' <<<"$prs" | cut -f2 | sed "s|^|https://github.com/$me/$name/commit/|")
@@ -115,7 +142,7 @@ publish() {
         git -C "$w" -c user.name=Tacit -c user.email="$email" tag -a "v$version" -m "Tacit $version"
         git -C "$w" push -q origin "v$version"
     fi
-    sed -i "s/^$name .*/$name $last/" "$state"
+    if grep -q "^$name " "$state" 2>/dev/null; then sed -i "s/^$name .*/$name $last/" "$state"; else echo "$name $last" >> "$state"; fi
     echo "$name: $n commits$([ -n "$version" ] && echo ", tagged v$version") — https://github.com/$me/$name"
     rm -rf "$w"
 }
@@ -129,3 +156,13 @@ publish "$HOME/dev/browser" thyris \
 publish "$HOME/dev/tacit-packages" tacit-build \
     "How Tacit is built: its Arch packages, the ISO and the installer's test computer" \
     "# tacit-build"
+# the design kit and its example app: public only when the owner says go (2026-10-25: show everything first); until
+# then only as DRY=1 WITH_KIT=1, which makes the public copies locally and creates nothing on GitHub
+if [ -n "${WITH_KIT:-}" ]; then
+    publish "$HOME/dev/tacit-kit" tacit-kit \
+        "Tacit.Kit: the parts Tacit's apps are made of, a QML module for Quickshell apps; the guide is tacitos.co/design" \
+        "# Tacit Kit"
+    publish "$HOME/dev/tacit-music-example" tacit-music-example \
+        "Tacit Music: a whole app made only of Tacit.Kit's parts" \
+        "# Tacit Music"
+fi

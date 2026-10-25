@@ -163,6 +163,6 @@ if [ -n "${WITH_KIT:-}" ]; then
         "Tacit.Kit: the parts Tacit's apps are made of, a QML module for Quickshell apps; the guide is tacitos.co/design" \
         "# Tacit Kit"
     publish "$HOME/dev/tacit-music-example" tacit-music-example \
-        "Tacit Music: a whole app made only of Tacit.Kit's parts" \
-        "# Tacit Music"
+        "A music player made only of Tacit.Kit's parts: an example to build your own app on" \
+        "# Music example"
 fi

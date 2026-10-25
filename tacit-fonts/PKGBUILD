@@ -1,7 +1,7 @@
 # Tacit: Tacit Sans (with its Compact, Condensed and Display cuts), Tacit Mono and Tacit Code. Modified SIL Open Font
 # License fonts (Onest, Readex Pro, Google Sans Code); the licences and FONTLOG travel with them.
 pkgname=tacit-fonts
-pkgver=1.0.0
+pkgver=1.0.1
 pkgrel=1
 pkgdesc="Tacit: Tacit Sans, Mono and Code"
 arch=('any')

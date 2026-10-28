@@ -1,0 +1,24 @@
+# mpvpaper: the live wallpaper player (Settings > Wallpaper plays a video on the desktop). Arch has it only in the AUR,
+# so it is carried here from upstream's tag. libmpv comes with mpv.
+pkgname=mpvpaper
+pkgver=1.9
+pkgrel=1
+pkgdesc="Video wallpaper program for wlroots based Wayland compositors"
+arch=('aarch64' 'x86_64')
+url="https://github.com/GhostNaN/mpvpaper"
+license=('GPL-3.0-only')
+depends=('mpv' 'wayland')
+makedepends=('git' 'meson' 'ninja' 'wayland-protocols')
+source=("git+https://github.com/GhostNaN/mpvpaper.git#tag=$pkgver")
+sha256sums=('SKIP')
+options=('!debug')
+
+build() {
+	arch-meson mpvpaper build
+	meson compile -C build
+}
+
+package() {
+	meson install -C build --destdir "$pkgdir"
+	install -Dm644 mpvpaper/mpvpaper.man "$pkgdir/usr/share/man/man1/mpvpaper.1"
+}

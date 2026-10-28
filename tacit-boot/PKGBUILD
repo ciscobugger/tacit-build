@@ -1,7 +1,7 @@
 # Tacit: the boot splash - one picture from the first frame to the lock screen.
 pkgname=tacit-boot
 pkgver=0.2.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Tacit: boot and shutdown splash"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-boot"

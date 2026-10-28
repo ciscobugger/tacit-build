@@ -11,6 +11,8 @@ license=('GPL-3.0-or-later')
 depends=('quickshell' 'qt6-declarative' 'qt6-5compat' 'qt6-positioning' 'syntax-highlighting' 'kirigami'
          'hyprland' 'hyprlock' 'jq' 'libnotify' 'wl-clipboard' 'grim' 'python' 'matugen' 'brightnessctl'
          'networkmanager' 'bluez-utils' 'wireplumber' 'cliphist' 'foot' 'xdg-utils' 'glib2' 'git' 'curl'
+         # live wallpapers (scripts/colors/switchwall.sh); mpvpaper is carried in this repo, Arch has it only in the AUR
+         'mpvpaper' 'mpv'
          'ripgrep' 'fd' 'imagemagick' 'ffmpeg' 'tacit-fonts' 'tacit-icons' 'noto-fonts-emoji'
          # Apps' sandbox (scripts/store/bundle.py)
          'bubblewrap' 'xdg-dbus-proxy' 'xdg-user-dirs' 'desktop-file-utils'

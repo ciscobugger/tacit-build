@@ -63,7 +63,9 @@ chown -R "$HOSTUID" /work
 INSIDE
 tar -C "$here" --exclude='*/src' --exclude='*/pkg' --exclude='*.pkg.tar.*' -cf "$tmp/recipes.tar" "$@"
 # the newest of each of ours the recipes build against, not every package built here: the upload is the slow part
-need=$(for p in "$@"; do grep -q '^build()' "$p/PKGBUILD" && (cd "$p" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}" "${makedepends[@]}"'); done | sed 's/[<>=].*//' | grep '^tacit-' | sort -u || true)
+need=$(for p in "$@"; do grep -q '^build()' "$p/PKGBUILD" && (cd "$p" && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}" "${makedepends[@]}"'); done | sed 's/[<>=].*//' | sort -u)
+# ours: tacit-*, and any other package this repo has a recipe for (mpvpaper)
+need=$(for d in $need; do case $d in tacit-*) echo "$d";; *) [ -f "$d/PKGBUILD" ] && echo "$d";; esac; done || true)
 have=$(for d in $need; do ls -t out/x86_64/$d-[0-9]*.pkg.tar.zst 2>/dev/null | head -1; done)
 on() { timeout 600 gcloud compute ssh $vm "${at[@]}" --command "$1"; }
 on "sudo rm -rf ~/tacit-x86 && mkdir -p ~/tacit-x86/work/have"

@@ -35,7 +35,7 @@ for p in "$@"; do
 	# ours only to build against: a recipe with no build() (the tacit meta package) needs none
 	# ours: Tacit's own packages, and any other this repo builds (mpvpaper: Arch has it only in the AUR), found by its
 	# file from this run or the upload
-	mine() { case $1 in tacit-*) return 0;; esac; ls /work/new/$1-[0-9]*.pkg.tar.zst /work/have/$1-[0-9]*.pkg.tar.zst >/dev/null 2>&1; }
+	mine() { case $1 in tacit-*) return 0;; esac; ls /work/new/$1-[0-9]*.pkg.tar.zst >/dev/null 2>&1 || ls /work/have/$1-[0-9]*.pkg.tar.zst >/dev/null 2>&1; }
 	ours=""; theirs=""
 	for d in $deps; do if mine "$d"; then ours="$ours $d"; else theirs="$theirs $d"; fi; done
 	# a recipe with no build() (the tacit meta package) needs none of ours to build against

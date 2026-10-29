@@ -3,7 +3,7 @@
 # and TACIT_BIN to these places and puts /usr/lib/tacit/bin first on PATH.
 pkgname=tacit-shell
 pkgver=0.2.1
-pkgrel=48
+pkgrel=51
 pkgdesc="Tacit: the shell and its apps"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -19,15 +19,15 @@ depends=('quickshell' 'qt6-declarative' 'qt6-5compat' 'qt6-positioning' 'syntax-
          # Apps' catalogue: names, words, icons and screenshot links (without it the store showed bare package names)
          'archlinux-appstream-data'
          # the colour helpers' environment (below) uses these from the system
-         'python-gobject' 'python-dbus')
+         'python-gobject' 'python-dbus' 'python-numpy' 'python-pillow')
 # what the shell's parts run, as on the owner's machine: optional until 2026-10-20, so no install had them and night
 # light, screen recording, a desktop monitor's brightness and drives in Files did nothing (reported on Discord)
 depends+=('bc' 'playerctl' 'slurp' 'tesseract-data-eng' 'tesseract' 'wtype' 'swappy' 'wf-recorder' 'hyprpicker' 'github-cli' 'ddcutil' 'hyprsunset' 'cava' 'udisks2')
 optdepends=('ydotool: Praxis typing into other windows (with ydotoold running and access to /dev/uinput)'
             'easyeffects: the equaliser')
-makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools')
+makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools' 'python-numpy' 'python-pillow')
 # the commit the shell's private repo had when this recipe was written; a release names a tag instead
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=9d2d115ccfa68d62bf744b5301c3faa4ea38f62b")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=3104525224bc1f0f6426e2cdfa4e76c254fbf808")
 sha256sums=('SKIP')
 install=tacit-shell.install
 options=('!debug')
@@ -69,6 +69,8 @@ package() {
 	# person has no ~/.config/quickshell/tacit of their own
 	install -d "$pkgdir/etc/xdg/quickshell"
 	ln -s /usr/share/tacit/shell "$pkgdir/etc/xdg/quickshell/tacit"
+	# (numpy and Pillow are Arch's, in depends and makedepends: the environment sees the system's, so pip leaves them
+	# out whatever else the build machine has installed; 0.2.1-50 carried its own copies, 24 MB more)
 	# the Python environment the colour, image and thumbnail helpers activate when the person has none of their own
 	# (session env.lua, scripts/venv.sh): the README's packages, built here at its final place, the build's path then
 	# taken out of its scripts

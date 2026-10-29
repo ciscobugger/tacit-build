@@ -4,7 +4,8 @@
       "version": "1.2",
       "date": "2026-10-29",
       "changes": [
-        "A new Files, made in Tacit's own design: Pictures, Grid and Columns views, filters, and a panel for what you select.",
+        "Close, hide and arrange windows from the small line at the top of every window: carry it up to the notch to close the window, down to the dock to hide it, or to a side of the screen for that half. Double-click it to fill the screen, or right-click it for a small map of the screen with the same places. Click the app in the dock to bring hidden windows back. Apps no longer show close and minimise buttons of their own.",
+    "A new Files, made in Tacit's own design: List, Grid, Gallery and Columns views, filters, and a panel for what you select.",
         "Icons on the desktop: the files in your Desktop folder show as light tags you can place anywhere. Drop files on the desktop to put them there.",
         "Alt+Tab switches windows: the overview opens from the notch, Tab moves through your windows, and letting go switches.",
         "Your own shortcuts: Settings › Keyboard & touchpad › Shortcuts changes any shortcut and adds your own for apps.",

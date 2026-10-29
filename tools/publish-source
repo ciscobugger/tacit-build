@@ -53,7 +53,12 @@ publish() {
     [ -z "${ONLY:-}" ] || [ "$ONLY" = "$name" ] || return 0    # ONLY=<public name>: just that repo
     local base w n=0 last first= head=HEAD
     # a release made on its own branch (release-<version>) is published from that branch, not from what is checked out
-    [ -n "$version" ] && git -C "$src" rev-parse -q --verify "refs/heads/release-$version" >/dev/null && head="release-$version"
+    # (a fix release, 1.2.1, from its release's branch, release-1.2: 1.2.1 went out first from the checkouts' main)
+    if [ -n "$version" ]; then
+        for rb in "release-$version" "release-${version%.*}"; do
+            git -C "$src" rev-parse -q --verify "refs/heads/$rb" >/dev/null && { head=$rb; break; }
+        done
+    fi
     base=$(sed -n "s/^$name //p" "$state" 2>/dev/null)
     w=$(mktemp -d)
     if gh repo view "$me/$name" >/dev/null 2>&1; then
@@ -147,6 +152,8 @@ publish() {
     for pr in $(cut -f1 <<<"$prs" | grep "^$me/$name#" | sort -u); do
         local links
         links=$(grep -F "$pr"$'\t' <<<"$prs" | cut -f2 | sed "s|^|https://github.com/$me/$name/commit/|")
+        # thanked and closed by an earlier run (1.2.1 published twice): not a second time
+        [ "$(gh pr view "${pr#*#}" -R "$me/$name" --json state -q .state 2>/dev/null)" = OPEN ] || continue
         gh pr comment "${pr#*#}" -R "$me/$name" --body "$(printf 'Thank you. This is in Tacit now, under your name:\n\n%s\n\nIt ships in the next release.' "$links")" >/dev/null
         gh pr close "${pr#*#}" -R "$me/$name" >/dev/null
         echo "$name: closed $pr with its commits"

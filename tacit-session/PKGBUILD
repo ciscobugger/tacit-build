@@ -19,7 +19,7 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
          'polkit')
 makedepends=('git')
 install=tacit-session.install
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=375b9411d06d593f1628ae441b44e0ad0dac89c7")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=1e6e9c3010a8c1b57a8616789c1624672c03aa3d")
 sha256sums=('SKIP')
 
 package() {

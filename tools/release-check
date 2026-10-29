@@ -59,10 +59,12 @@ for f in */PKGBUILD; do
 		git -C "$c" fetch -q origin 2>/dev/null
 		git -C "$c" branch -r --contains "$ref" 2>/dev/null | grep -q . || { bad "$d: commit ${ref:0:7} is not pushed"; continue; }
 		# a release made on its own branch (release-<version>) is measured against that branch, not against whatever
-		# the clone has checked out
-		if git -C "$c" rev-parse -q --verify "origin/release-$version" >/dev/null; then
-			base="origin/release-$version"
-			unpushed=$(git -C "$c" rev-list --count "origin/release-$version..release-$version" 2>/dev/null || echo 0)
+		# the clone has checked out; a fix release (1.2.1) is made on its release's branch (release-1.2)
+		rb=release-$version
+		git -C "$c" rev-parse -q --verify "origin/$rb" >/dev/null || rb=release-${version%.*}
+		if git -C "$c" rev-parse -q --verify "origin/$rb" >/dev/null; then
+			base="origin/$rb"
+			unpushed=$(git -C "$c" rev-list --count "origin/$rb..$rb" 2>/dev/null || echo 0)
 		else
 			base=HEAD
 			unpushed=$(git -C "$c" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)

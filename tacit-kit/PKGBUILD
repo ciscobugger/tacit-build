@@ -10,7 +10,7 @@ url="https://github.com/ciscobugger/tacit-kit"
 license=('LGPL-3.0-or-later')
 depends=('quickshell' 'qt6-declarative')
 makedepends=('git')
-source=("git+https://github.com/ciscobugger/tacit-kit.git#commit=749960511d34961ea7aaee356272971b53ab07bc")
+source=("git+https://github.com/ciscobugger/tacit-kit.git#commit=f34574dae85aec2eb9e8835cc1dfece87cdfdf2d")
 sha256sums=('SKIP')
 
 package() {

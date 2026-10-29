@@ -1,11 +1,31 @@
 {
   "releases": [
     {
+      "version": "1.2.1",
+      "date": "2026-10-29",
+      "changes": [
+        "Tacit moves to the newest version of the window system it runs on (Hyprland 0.57). A computer whose updates stopped with a message about Hyprland updates again.",
+        "Files can start an app from its launcher (a .desktop file): Start is at the top of its menu. Double-clicked, a launcher marked as a program starts its app; any other opens as text, so one that came from a download never runs by a double-click.",
+        "Settings › Desktop › Desktop widgets: choose for each widget whether you drag it where you like or it finds a calm or busy spot on the wallpaper. Made by ygnk.",
+        "Three fingers on the touchpad do what the line at the top of a window does: swipe up to close the window under the pointer, down to hide it, left or right to put it on that half of the screen.",
+        "The first click on an app in the dock opens it, also right after you sign in.",
+        "Apps started from Tacit no longer quit on their own after a while (Discord did).",
+        "Files: Put back brings files out of the trash again, and Set up your phone works from start to finish.",
+        "Thyris: Add to Chrome in the Chrome Web Store no longer closes Thyris. It asks to add the extension to Thyris, as the line under the address does.",
+        "When an install needs your password, the ask says in words what it will do, not the command it runs.",
+        "The control panel: rearrange it with Edit under its buttons (Done when you are finished).",
+        "Apps: an app you got from the search results says Open there, not Get.",
+        "Settings › About: Checked at shows when the last check for updates was.",
+        "The corner that opens the notifications is only the top edge of the screen now, so it no longer covers the top of a window in that corner.",
+        "Choosing part of the screen for a screenshot offers the pictures on it again."
+      ]
+    },
+    {
       "version": "1.2",
       "date": "2026-10-29",
       "changes": [
         "Close, hide and arrange windows from the small line at the top of every window: carry it up to the notch to close the window, down to the dock to hide it, or to a side of the screen for that half. Double-click it to fill the screen, or right-click it for a small map of the screen with the same places. Click the app in the dock to bring hidden windows back. Apps no longer show close and minimise buttons of their own.",
-    "A new Files, made in Tacit's own design: List, Grid, Gallery and Columns views, filters, and a panel for what you select.",
+        "A new Files, made in Tacit's own design: List, Grid, Gallery and Columns views, filters, and a panel for what you select.",
         "Icons on the desktop: the files in your Desktop folder show as light tags you can place anywhere. Drop files on the desktop to put them there.",
         "Alt+Tab switches windows: the overview opens from the notch, Tab moves through your windows, and letting go switches.",
         "Your own shortcuts: Settings › Keyboard & touchpad › Shortcuts changes any shortcut and adds your own for apps.",

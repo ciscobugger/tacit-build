@@ -3,7 +3,7 @@
 # and TACIT_BIN to these places and puts /usr/lib/tacit/bin first on PATH.
 pkgname=tacit-shell
 pkgver=0.2.1
-pkgrel=51
+pkgrel=53
 pkgdesc="Tacit: the shell and its apps"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -27,7 +27,7 @@ optdepends=('ydotool: Praxis typing into other windows (with ydotoold running an
             'easyeffects: the equaliser')
 makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools' 'python-numpy' 'python-pillow')
 # the commit the shell's private repo had when this recipe was written; a release names a tag instead
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=3104525224bc1f0f6426e2cdfa4e76c254fbf808")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=ffd07d65069ae6da2fab95f83ec4e74e1255823b")
 sha256sums=('SKIP')
 install=tacit-shell.install
 options=('!debug')
@@ -77,10 +77,11 @@ package() {
 	local venv="$pkgdir/usr/lib/tacit/venv"
 	# the colour library at the owner's versions (~/.local/state/quickshell/requirements.txt): a newer materialyoucolor
 	# renamed primary_paletteKeyColor, generate_colors_material.py failed, and a new account's terminal kept its built-in
-	# green (2026-10-17)
+	# green (2026-10-17). OpenCV with its contrib part, as the owner's: the screenshot's picture regions need
+	# cv2.ximgproc, which the plain build lacks (find_regions.py failed on every install, 2026-10-29)
 	python -m venv --system-site-packages "$venv"
 	"$venv/bin/pip" install -q --no-cache-dir --disable-pip-version-check \
-		'materialyoucolor==2.0.10' pillow numpy opencv-python-headless loguru click tqdm 'kde-material-you-colors==1.10.1'
+		'materialyoucolor==2.0.10' pillow numpy opencv-contrib-python-headless loguru click tqdm 'kde-material-you-colors==1.10.1'
 	grep -rlI --null "$pkgdir" "$venv" | xargs -0 -r sed -i "s|$pkgdir||g"
 	printf 'enable focus-priority.service\nenable quiet-btagent.service\nenable quiet-filemanager1.service\n' \
 		| install -Dm644 /dev/stdin "$pkgdir/usr/lib/systemd/user-preset/80-tacit-shell.preset"

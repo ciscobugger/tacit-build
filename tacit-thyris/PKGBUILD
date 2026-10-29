@@ -2,7 +2,7 @@
 # tacit-cef-sdk; the binaries find the engine in /usr/lib/tacit/cef (their run path), and it finds them beside itself.
 pkgname=tacit-thyris
 pkgver=0.1.4
-pkgrel=17
+pkgrel=18
 _cef=154.0.34
 pkgdesc="Tacit: Thyris, the web browser"
 arch=('aarch64' 'x86_64')
@@ -16,7 +16,7 @@ depends=("tacit-cef=$_cef" 'qt6-base' 'qt6-declarative' 'qt6-webchannel' 'qt6-we
 optdepends=('hunspell-en_gb: spell check in British English'
             'hunspell-en_us: spell check in American English')
 makedepends=("tacit-cef-sdk=$_cef" 'cmake' 'ninja' 'git' 'rust' 'qt6-shadertools' 'patchelf')
-source=("git+https://github.com/ciscobugger/tacit-opsis.git#commit=808928e3acd235edefd650f424daf9dbeca599bf"
+source=("git+https://github.com/ciscobugger/tacit-opsis.git#commit=cac23c74690a34e21011b30add6812eca91521f7"
         'thyris' 'thyris.desktop')
 sha256sums=('SKIP' 'SKIP' 'SKIP')
 options=('!debug')

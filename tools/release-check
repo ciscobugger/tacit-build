@@ -20,7 +20,7 @@ note() { printf '  note  %s\n' "$*"; }
 
 # where each private repo is checked out on this machine
 declare -A clone=(
-	[tacit-shell]=$HOME/.config/quickshell/tacit [tacit-opsis]=$HOME/dev/browser [tacit-agent-host]=$HOME/dev/agent-host
+	[tacit-shell]=$HOME/.config/quickshell/tacit [tacit-opsis]=$HOME/dev/browser [tacit-agent-host]=$HOME/dev/agent-host [tacit-kit]=$HOME/dev/tacit-kit
 	[tacit-portal]=$HOME/dev/tacit-portal [tacit-boot]=$HOME/dev/tacit-boot [tacit-font]=$HOME/dev/tacit-font
 	[tacit-icons]=$HOME/dev/tacit-icons [tacit-foot]=$HOME/dev/tacit-foot [tacit-text]=$HOME/dev/tacit-text
 	[book4-edge-linux]=$HOME/dev/book4-edge-linux [tacit-kit]=$HOME/dev/tacit-kit

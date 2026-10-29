@@ -50,6 +50,7 @@ Owner, 2026-10-25: the numbers follow how a release reaches people, not how many
 6. **Gate.** `tools/release-check <version>` passes.
 7. **Publish.** `tools/publish <packages>`; then `tools/arch-day <day>` if the day moved; then
    `tools/publish-source <version>`.
-8. **The ISO**, when Setup, the live system or the first start changed: `tools/iso`, a fresh install in the VM, upload
-   under a new dated name, move the download's `LATEST`.
+8. **The ISO, with every release** (owner, 2026-10-29: people download the release they read about): `tools/iso`, a
+   fresh install in the VM, upload under a new dated name, move the download's `LATEST`; the release notes page links
+   that release's own ISO with its size and SHA256.
 9. **Say it.** The site's release notes and install page; a post in Discord's #releases once the owner has read it.

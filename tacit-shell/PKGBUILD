@@ -13,7 +13,7 @@ depends=('quickshell' 'qt6-declarative' 'qt6-5compat' 'qt6-positioning' 'syntax-
          'networkmanager' 'bluez-utils' 'wireplumber' 'cliphist' 'foot' 'xdg-utils' 'glib2' 'git' 'curl'
          # live wallpapers (scripts/colors/switchwall.sh); mpvpaper is carried in this repo, Arch has it only in the AUR
          'mpvpaper' 'mpv'
-         'ripgrep' 'fd' 'imagemagick' 'ffmpeg' 'tacit-fonts' 'tacit-icons' 'noto-fonts-emoji'
+         'ripgrep' 'fd' 'imagemagick' 'ffmpeg' 'tacit-fonts' 'tacit-icons' 'tacit-kit' 'noto-fonts-emoji'
          # Apps' sandbox (scripts/store/bundle.py)
          'bubblewrap' 'xdg-dbus-proxy' 'xdg-user-dirs' 'desktop-file-utils'
          # Apps' catalogue: names, words, icons and screenshot links (without it the store showed bare package names)

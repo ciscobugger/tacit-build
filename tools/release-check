@@ -49,11 +49,28 @@ for f in */PKGBUILD; do
 		git -C "$c" ls-remote --exit-code --tags origin "refs/tags/$ref" >/dev/null 2>&1 || { bad "$d: tag $ref is not on GitHub"; continue; }
 		after=$(git -C "$c" rev-list --count "$ref..origin/HEAD" 2>/dev/null || git -C "$c" rev-list --count "$ref..HEAD")
 		[ "$after" = 0 ] && ok "$d: $ref" || note "$d: $ref, $after commits after it are not in this release"
+	elif [ -z "$(git -C "$c" remote)" ]; then
+		# a clone with no remote is the private history of a published copy (publish-source): the pin is the public
+		# repo's own commit, so it is checked there
+		gh api "repos/ciscobugger/$repo/commits/$ref" --jq .sha >/dev/null 2>&1 && ok "$d: ${ref:0:7} (published)" \
+			|| bad "$d: commit ${ref:0:7} is not on github.com/ciscobugger/$repo"
+		continue
 	else
 		git -C "$c" fetch -q origin 2>/dev/null
 		git -C "$c" branch -r --contains "$ref" 2>/dev/null | grep -q . || { bad "$d: commit ${ref:0:7} is not pushed"; continue; }
-		behind=$(git -C "$c" rev-list --count "$ref..HEAD")
-		[ "$behind" = 0 ] && ok "$d: ${ref:0:7} (HEAD)" || bad "$d: ${ref:0:7} is $behind commits behind HEAD: pin the new commit or say why not"
+		# a release made on its own branch (release-<version>) is measured against that branch, not against whatever
+		# the clone has checked out
+		if git -C "$c" rev-parse -q --verify "origin/release-$version" >/dev/null; then
+			base="origin/release-$version"
+			unpushed=$(git -C "$c" rev-list --count "origin/release-$version..release-$version" 2>/dev/null || echo 0)
+		else
+			base=HEAD
+			unpushed=$(git -C "$c" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+		fi
+		behind=$(git -C "$c" rev-list --count "$ref..$base")
+		[ "$behind" = 0 ] && ok "$d: ${ref:0:7} (${base#origin/})" || bad "$d: ${ref:0:7} is $behind commits behind ${base#origin/}: pin the new commit or say why not"
+		[ "$unpushed" = 0 ] || bad "$d: $unpushed commits on ${base#origin/} in $c are not pushed"
+		continue
 	fi
 	unpushed=$(git -C "$c" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
 	[ "$unpushed" = 0 ] || bad "$d: $unpushed commits in $c are not pushed"

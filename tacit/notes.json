@@ -1,12 +1,27 @@
 {
   "releases": [
     {
-      "version": "1.1.8",
-      "date": "2026-10-24",
+      "version": "1.2",
+      "date": "2026-10-29",
       "changes": [
-        "When your settings file has a mistake in it, Tacit says so once, not again and again, and offers to put back the last good copy.",
-        "While that file can't be read, Settings says that changes aren't saved, with Restore. Changes used to look saved and were lost.",
-        "A wallpaper that can't be shown is reported once, not once for each screen."
+        "A new Files, made in Tacit's own design: Pictures, Grid and Columns views, filters, and a panel for what you select.",
+        "Icons on the desktop: the files in your Desktop folder show as light tags you can place anywhere. Drop files on the desktop to put them there.",
+        "Alt+Tab switches windows: the overview opens from the notch, Tab moves through your windows, and letting go switches.",
+        "Your own shortcuts: Settings › Keyboard & touchpad › Shortcuts changes any shortcut and adds your own for apps.",
+        "Send files to your phone from Files: set up your phone once under Devices, then right-click a file and choose Send to your phone.",
+        "A new control panel, made by ygnk: the main switches in front, the rest behind More, and the week at a glance.",
+        "Thyris adds extensions from a downloaded file, can show your tabs along the top (Settings › Appearance and reading), and scrolls smoothly with a mouse wheel.",
+        "The notch no longer covers a video in full screen.",
+        "Super+Esc opens the session menu: lock, log out, restart, shut down. Settings is Super+I.",
+        "The emoji picker types the emoji into the app you were writing in.",
+        "Drag a photo in the wallpaper strip to choose which part of it shows.",
+        "Live wallpapers work on every computer.",
+        "Installing Tacit next to Windows keeps the clock right in both.",
+        "Signing in a new Claude account finishes as soon as you are done in the browser, and Settings shows the account you switched to.",
+        "Other programs can no longer start or steer your agent: a hand-off puts your text in the box and you press Enter.",
+        "When Files, Activity or Apps can't do something, they say why, with a way to try again.",
+        "When your settings file has a mistake in it, Tacit says so once and offers to put back the last good copy; until then, Settings says changes aren't saved.",
+        "Many smaller fixes in Settings, Praxis, the Viewer, Activity, Apps, Graphis, the dock, notifications, screenshots, updates and Thyris."
       ]
     },
     {

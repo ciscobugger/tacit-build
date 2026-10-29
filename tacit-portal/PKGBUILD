@@ -2,7 +2,7 @@
 # picker as Tacit sheets. The sheets themselves are part of tacit-shell.
 pkgname=tacit-portal
 pkgver=0.1.2
-pkgrel=2
+pkgrel=1
 pkgdesc="Tacit: file dialogs, Open with, keyring prompt, share picker and live window shares"
 arch=('aarch64' 'x86_64')
 url="https://github.com/ciscobugger/tacit-portal"

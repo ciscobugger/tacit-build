@@ -22,7 +22,7 @@ depends=('quickshell' 'qt6-declarative' 'qt6-5compat' 'qt6-positioning' 'syntax-
          'python-gobject' 'python-dbus')
 # what the shell's parts run, as on the owner's machine: optional until 2026-10-20, so no install had them and night
 # light, screen recording, a desktop monitor's brightness and drives in Files did nothing (reported on Discord)
-depends+=('bc' 'playerctl' 'slurp' 'tesseract-data-eng' 'tesseract' 'swappy' 'wf-recorder' 'hyprpicker' 'github-cli' 'ddcutil' 'hyprsunset' 'cava' 'udisks2')
+depends+=('bc' 'playerctl' 'slurp' 'tesseract-data-eng' 'tesseract' 'wtype' 'swappy' 'wf-recorder' 'hyprpicker' 'github-cli' 'ddcutil' 'hyprsunset' 'cava' 'udisks2')
 optdepends=('ydotool: Praxis typing into other windows (with ydotoold running and access to /dev/uinput)'
             'easyeffects: the equaliser')
 makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools')

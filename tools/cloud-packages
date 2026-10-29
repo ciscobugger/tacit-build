@@ -33,8 +33,13 @@ for p in "$@"; do
 	echo "== $p"
 	deps=$(cd /work/$p && bash -c 'source PKGBUILD; printf "%s\n" "${depends[@]}" "${makedepends[@]}"' | sed 's/[<>=].*//' | sort -u)
 	# ours only to build against: a recipe with no build() (the tacit meta package) needs none
-	ours=$(grep -q '^build()' /work/$p/PKGBUILD && printf '%s\n' $deps | grep '^tacit-' || true)
-	theirs=$(printf '%s\n' $deps | grep -v '^tacit-' || true)
+	# ours: Tacit's own packages, and any other this repo builds (mpvpaper: Arch has it only in the AUR), found by its
+	# file from this run or the upload
+	mine() { case $1 in tacit-*) return 0;; esac; ls /work/new/$1-[0-9]*.pkg.tar.zst /work/have/$1-[0-9]*.pkg.tar.zst >/dev/null 2>&1; }
+	ours=""; theirs=""
+	for d in $deps; do if mine "$d"; then ours="$ours $d"; else theirs="$theirs $d"; fi; done
+	# a recipe with no build() (the tacit meta package) needs none of ours to build against
+	grep -q '^build()' /work/$p/PKGBUILD || ours=""
 	# and what ours need from Arch to be linked against (tacit-cef's at-spi2-core: Thyris's link failed without it)
 	for d in $ours; do
 		f=$(ls -t /work/new/$d-[0-9]*.pkg.tar.zst /work/have/$d-[0-9]*.pkg.tar.zst 2>/dev/null | head -1 || true)
@@ -64,7 +69,7 @@ on() { timeout 600 gcloud compute ssh $vm "${at[@]}" --command "$1"; }
 on "sudo rm -rf ~/tacit-x86 && mkdir -p ~/tacit-x86/work/have"
 gcloud compute scp "${at[@]}" "$tmp/recipes.tar" "$tmp/inside.sh" $have $vm:~/tacit-x86/ >/dev/null
 # the build runs on there by itself (an hour for Qt Declarative); this side looks every minute
-on "cd ~/tacit-x86 && tar -xf recipes.tar -C work && mv inside.sh work/ && { mv tacit-*.pkg.tar.zst work/have/ 2>/dev/null || true; } \
+on "cd ~/tacit-x86 && tar -xf recipes.tar -C work && mv inside.sh work/ && { mv ./*.pkg.tar.zst work/have/ 2>/dev/null || true; } \
     && (setsid nohup bash -c 'sudo docker run --rm --network=host --cpus=${CPUS:-8} -e HOSTUID=\$(id -u) -e ARCH_MIRROR=${ARCH_MIRROR:-} -v \$HOME/tacit-x86/work:/work archlinux:latest bash /work/inside.sh $* > \$HOME/tacit-x86/run.log 2>&1; echo \$? > \$HOME/tacit-x86/done' > /dev/null 2>&1 < /dev/null &)"
 until on "test -f ~/tacit-x86/done" 2>/dev/null; do sleep 60; done
 on "cat ~/tacit-x86/run.log"

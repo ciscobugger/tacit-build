@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "1.2.2",
+      "date": "2026-10-30",
+      "changes": [
+        "Alt+Tab switches windows however quickly you tap it. A quick tap no longer leaves the overview open.",
+        "Super with another key no longer brings up the dock as well (Super+Enter, Super+Q and the rest), and Super+Tab opens the overview again. Made by alex.",
+        "Files: right-click menus open whole inside the window, also near its bottom edge, and the buttons on the phone page answer a click. Made by alex.",
+        "Hiding a window in the dock: the dock no longer stays up when the app quits on the way, and the app's button lights up for every app, Thyris included. Made by alex.",
+        "The small map of the screen (right-click the line at the top of a window) shows a live wallpaper instead of a black card. Made by alex.",
+        "kitty and zsh get Tacit's settings, as the built-in terminal and fish have them: the font, the padding and the see-through look in kitty, the prompt and shortcuts in zsh. Made by ygnk.",
+        "Setup says why it can't make room next to Windows: a disk check Windows has waiting, or what the disk itself said, rather than always that Windows didn't shut down fully."
+      ]
+    },
+    {
       "version": "1.2.1",
       "date": "2026-10-29",
       "changes": [

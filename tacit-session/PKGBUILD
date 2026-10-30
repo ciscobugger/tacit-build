@@ -19,7 +19,8 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
          'polkit')
 makedepends=('git')
 install=tacit-session.install
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=55718a91c49f485bdf1f773393ddae36b9bb4427")
+backup=('etc/xdg/kitty/kitty.conf')
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=c4cd665c7cc34cc761fa625e9433d15f7c029a12")
 sha256sums=('SKIP')
 
 package() {
@@ -27,6 +28,10 @@ package() {
 	install -d "$pkgdir/usr/share/tacit/hypr" "$pkgdir/usr/share/tacit/xdg"
 	cp -r --no-preserve=ownership hypr/. "$pkgdir/usr/share/tacit/hypr/"
 	cp -r --no-preserve=ownership xdg/. "$pkgdir/usr/share/tacit/xdg/"
+	# kitty's (Yugank, PR #9) where kitty reads it: a config folder in XDG_CONFIG_DIRS counts only when the person can
+	# write to it, /etc/xdg/kitty/kitty.conf always, merged under their own
+	rm -r "$pkgdir/usr/share/tacit/xdg/kitty"
+	install -Dm644 xdg/kitty/kitty.conf -t "$pkgdir/etc/xdg/kitty/"
 	install -d "$pkgdir/usr/share/tacit/matugen"
 	cp -r --no-preserve=ownership matugen/. "$pkgdir/usr/share/tacit/matugen/"
 	find "$pkgdir/usr/share/tacit" -type d -exec chmod 755 {} + -o -type f -name '*.sh' -exec chmod 755 {} + -o -type f -exec chmod 644 {} +

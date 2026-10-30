@@ -20,7 +20,7 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
 makedepends=('git')
 install=tacit-session.install
 backup=('etc/xdg/kitty/kitty.conf')
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=c4cd665c7cc34cc761fa625e9433d15f7c029a12")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=a9d866394c76869be899d7256f956f704b2d3486")
 sha256sums=('SKIP')
 
 package() {

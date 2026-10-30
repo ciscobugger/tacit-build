@@ -27,7 +27,7 @@ optdepends=('ydotool: Praxis typing into other windows (with ydotoold running an
             'easyeffects: the equaliser')
 makedepends=('git' 'cmake' 'ninja' 'qt6-shadertools' 'python-numpy' 'python-pillow')
 # the commit the shell's private repo had when this recipe was written; a release names a tag instead
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=c4cd665c7cc34cc761fa625e9433d15f7c029a12")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=a9d866394c76869be899d7256f956f704b2d3486")
 sha256sums=('SKIP')
 install=tacit-shell.install
 options=('!debug')

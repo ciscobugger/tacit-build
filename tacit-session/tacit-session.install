@@ -5,6 +5,7 @@ post_install() {
 	_mirrors
 	_nvidia
 	_network
+	_zsh
 }
 post_upgrade() {
 	post_install
@@ -55,4 +56,17 @@ _network() {
 	systemctl disable systemd-networkd.service systemd-networkd.socket systemd-networkd-wait-online.service \
 		systemd-homed.service >/dev/null 2>&1 || true
 	mkdir -p /var/lib/tacit && touch "$done"
+}
+
+# zsh, for those who use it: Tacit's prompt, colours and aliases (/usr/share/tacit/zsh/tacit.zsh) from an /etc/zsh/zshenv
+# of one line, written only where there is none (not a package file: one made by hand would stop the update). Removed
+# with the package only while it is still that line.
+_zsh_line='[[ -o interactive && -r /usr/share/tacit/zsh/tacit.zsh ]] && source /usr/share/tacit/zsh/tacit.zsh  # Tacit (tacit-session)'
+_zsh() {
+	[ -e /etc/zsh/zshenv ] && return 0
+	mkdir -p /etc/zsh && printf '%s\n' "$_zsh_line" > /etc/zsh/zshenv
+}
+pre_remove() {
+	[ "$(cat /etc/zsh/zshenv 2>/dev/null)" = "$_zsh_line" ] && rm -f /etc/zsh/zshenv
+	return 0
 }

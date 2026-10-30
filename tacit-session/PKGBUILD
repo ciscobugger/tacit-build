@@ -2,7 +2,7 @@
 # and win), the lock, idle and screen share settings, the "Tacit" session and Tacit's login screen.
 pkgname=tacit-session
 pkgver=0.2.1
-pkgrel=44
+pkgrel=46
 pkgdesc="Tacit: the Hyprland session"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -19,7 +19,7 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
          'polkit')
 makedepends=('git')
 install=tacit-session.install
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=ffd07d65069ae6da2fab95f83ec4e74e1255823b")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=55718a91c49f485bdf1f773393ddae36b9bb4427")
 sha256sums=('SKIP')
 
 package() {
@@ -51,6 +51,8 @@ package() {
 	install -Dm644 systemd/system.conf.d/50-tacit-quiet-restart.conf -t "$pkgdir/usr/lib/systemd/system.conf.d/"
 	# the terminal: fish's Tacit config, Tacit's prompt
 	install -Dm644 fish/tacit.fish -t "$pkgdir/usr/share/fish/vendor_conf.d/"
+	# zsh's (Yugank, PR #9): loaded from /etc/zsh/zshenv, which tacit-session.install writes where there is none
+	install -Dm644 zsh/tacit.zsh -t "$pkgdir/usr/share/tacit/zsh/"
 	install -Dm644 starship.toml -t "$pkgdir/usr/share/tacit/"
 	# Tacit's apps for files and links also where the user manager's services look (XDG_DATA_DIRS, environment.d)
 	install -Dm644 xdg/mimeapps.list -t "$pkgdir/usr/share/tacit/applications/"

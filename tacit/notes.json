@@ -19,7 +19,11 @@
         "\"Blur the wallpaper\" also blurs a video wallpaper. Made by alex.",
         "Settings: Change the folder opens the folder picker again. Made by alex.",
         "Notes: the text keeps the widget's width from the first keystroke. Made by alex.",
-        "Viewer: a zoomed picture stays inside the window and comes back to the middle when zoomed out. Made by alex."
+        "Viewer: a zoomed picture stays inside the window and comes back to the middle when zoomed out. Made by alex.",
+        "Desktop widgets stay in sight on a video wallpaper, where the video used to cover them. Made by alex.",
+        "A file moved on the desktop can be dragged and right-clicked again at its new place. Made by alex.",
+        "The list of shortcuts no longer offers a light mode, which Tacit doesn't have. Made by Abdul Hadi.",
+        "kitty now reads your own settings, and Ctrl+Shift+C stops a running program as in the built-in terminal. In zsh, Ctrl+S no longer freezes the terminal and # starts a comment, as in fish. Made by ygnk."
       ]
     },
     {

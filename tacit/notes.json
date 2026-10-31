@@ -15,7 +15,11 @@
         "Updates: a night update no longer waits on a wireless mouse's battery, and Restart and update waits until the update is ready.",
         "Thyris: zips made on Windows unpack, a download with the same name as an earlier one is kept beside it, and a tab put to sleep stays asleep when the window changes size.",
         "Settings: a screen can sit left of or above another, changing one screen's scale keeps the others in place, and the computer's name is checked before it is set.",
-        "Notifications: a damaged notifications file no longer empties the list, and urgent notifications stay until you close them. The fingerprint reader tries again after a failed finger."
+        "Notifications: a damaged notifications file no longer empties the list, and urgent notifications stay until you close them. The fingerprint reader tries again after a failed finger.",
+        "\"Blur the wallpaper\" also blurs a video wallpaper. Made by alex.",
+        "Settings: Change the folder opens the folder picker again. Made by alex.",
+        "Notes: the text keeps the widget's width from the first keystroke. Made by alex.",
+        "Viewer: a zoomed picture stays inside the window and comes back to the middle when zoomed out. Made by alex."
       ]
     },
     {

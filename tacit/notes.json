@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "1.2.3",
+      "date": "2026-10-31",
+      "changes": [
+        "The brightness and volume sliders in the control panel move again. Dragging them changed nothing since 1.2.1.",
+        "On computers without their graphics driver set up, and in virtual machines, the desktop kept redrawing itself after you unlocked the screen and used most of the processor while nothing happened. It now rests.",
+        "If the desktop stops, it comes back by itself, without a \"Quickshell has crashed\" window and without leaving memory behind.",
+        "Files opens at the size you left it. Hiding or closing it with the window's top line could leave it opening small from then on.",
+        "Lighter on 4 GB computers: Thyris keeps its spare developer tools closed when memory is short and puts sleeping tabs away sooner, and the notch, updates and the agent list start far fewer background programs.",
+        "Apps: the home page loads its pictures together, an app page opens faster, Get no longer downloads the app lists a second time, and an app opens once however often Open is pressed.",
+        "Files: dropping onto Trash moves things to the trash, renaming a folder shows the name field, Open with lists every app for every kind of file, and the Trash's path reads Trash.",
+        "Setup: the answers you gave reach the install after Setup restarts, Windows' disk check is looked for on every Windows partition, memory cards' hidden parts are no longer offered as disks, and Wi-Fi names with a colon work.",
+        "Updates: a night update no longer waits on a wireless mouse's battery, and Restart and update waits until the update is ready.",
+        "Thyris: zips made on Windows unpack, a download with the same name as an earlier one is kept beside it, and a tab put to sleep stays asleep when the window changes size.",
+        "Settings: a screen can sit left of or above another, changing one screen's scale keeps the others in place, and the computer's name is checked before it is set.",
+        "Notifications: a damaged notifications file no longer empties the list, and urgent notifications stay until you close them. The fingerprint reader tries again after a failed finger."
+      ]
+    },
+    {
       "version": "1.2.2",
       "date": "2026-10-30",
       "changes": [

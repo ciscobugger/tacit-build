@@ -2,7 +2,7 @@
 # and win), the lock, idle and screen share settings, the "Tacit" session and Tacit's login screen.
 pkgname=tacit-session
 pkgver=0.2.1
-pkgrel=46
+pkgrel=47
 pkgdesc="Tacit: the Hyprland session"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-shell"
@@ -20,7 +20,7 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
 makedepends=('git')
 install=tacit-session.install
 backup=('etc/xdg/kitty/kitty.conf')
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=f937683efcdea19e8ba2334012b29c50e3fc0eea")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=3421499a4eba6a83548f6ccd3268463bb98f936c")
 sha256sums=('SKIP')
 
 package() {

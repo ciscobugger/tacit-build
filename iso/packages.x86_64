@@ -35,6 +35,8 @@ arch-install-scripts
 squashfs-tools
 gptfdisk
 parted
+# Setup's "Make or resize partitions" (live only: the installer removes it from the installed system)
+gparted
 dosfstools
 e2fsprogs
 # next to Windows: ntfsresize shrinks it, ntfscat reads whether it is hibernated

@@ -1,6 +1,17 @@
 {
   "releases": [
     {
+      "version": "1.2.6",
+      "date": "2026-11-01",
+      "changes": [
+        "Files looks as it did before 1.2 again: the compact toolbar with a search field, names under the pictures, the side panel with every action, and the line at the bottom. The Columns view, the filter and your phone from 1.2 stay.",
+        "Setup finds the disk on older PCs. It could say there was no disk at all.",
+        "While you record the screen, Stop shows as soon as you point at the notch. Made by alex.",
+        "Apps: start typing to search, no click on the search bar first. Made by alex.",
+        "The notch and the panels have cleaner frosted edges on bright wallpapers. Made by Abdul Hadi."
+      ]
+    },
+    {
       "version": "1.2.5",
       "date": "2026-11-01",
       "changes": [

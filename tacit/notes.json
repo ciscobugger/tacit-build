@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "1.2.5",
+      "date": "2026-11-01",
+      "changes": [
+        "At 125, 150 and 175% display scale the wallpaper fills the screen again. It sat small in the top-left corner. Made by alex.",
+        "Files: a file you've just compressed or copied shows its real size, not 0 B. Made by alex.",
+        "The backup lock screen uses Tacit's own font, the phone connection starts only when it's installed, and the desktop logs far fewer errors. Made by Abdul Hadi."
+      ]
+    },
+    {
       "version": "1.2.4",
       "date": "2026-11-01",
       "changes": [

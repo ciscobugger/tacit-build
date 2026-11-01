@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "1.2.4",
+      "date": "2026-11-01",
+      "changes": [
+        "Viewer opens pictures and PDFs again. Since 1.2.3 it didn't open at all.",
+        "A wallpaper smaller than the screen fills the screen. It used to sit small in a corner with black around it.",
+        "Choose how the wallpaper fits the screen in Settings › Appearance › Wallpaper: Fill, Whole picture or Stretch. A video wallpaper follows the same choice. Asked for by ygnk."
+      ]
+    },
+    {
       "version": "1.2.3",
       "date": "2026-10-31",
       "changes": [

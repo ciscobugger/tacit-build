@@ -6,6 +6,7 @@
       "changes": [
         "Changing the pointer or touchpad speed in Settings no longer shows an error. Settings now has a Touchpad section and a Mouse section, each with its own acceleration and speed. Made by ygnk.",
         "A folder on the desktop opens in Files on the workspace you are on. Files could open it on another workspace, so nothing seemed to happen.",
+        "Restart installs the updates that are ready, from the session menu, the search and the lock screen too. Only the Restart in Settings and in the notch did.",
         "When an install stops, Setup's log says why and at which step."
       ]
     },

@@ -2,7 +2,7 @@
   "releases": [
     {
       "version": "1.2.7",
-      "date": "2026-11-01",
+      "date": "2026-11-02",
       "changes": [
         "Setup is ready at once on computers with several drives. It says it is looking at the disks while it reads them, and asks which disk Tacit should go on instead of choosing the biggest.",
         "Setup: Choose partitions myself, under the disk, lets you pick the partition Tacit goes on. Make or resize partitions opens a partition editor to make room."

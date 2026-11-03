@@ -6,6 +6,7 @@ post_install() {
 	_nvidia
 	_network
 	_zsh
+	_memory
 }
 post_upgrade() {
 	post_install
@@ -69,4 +70,14 @@ _zsh() {
 pre_remove() {
 	[ "$(cat /etc/zsh/zshenv 2>/dev/null)" = "$_zsh_line" ] && rm -f /etc/zsh/zshenv
 	return 0
+}
+
+# earlyoom turned on (computers installed before 1.2.9 too; 80-tacit-memory.preset says the same for presets):
+# turned on once, its settings (memory/earlyoom.service.d) read first; the person's own choice since then stands
+_memory() {
+	local done=/var/lib/tacit/memory-guard
+	[ -e "$done" ] && return 0
+	systemctl daemon-reload >/dev/null 2>&1 || true
+	systemctl enable --now earlyoom.service >/dev/null 2>&1 || true
+	mkdir -p /var/lib/tacit && touch "$done"
 }

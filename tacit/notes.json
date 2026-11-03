@@ -1,6 +1,17 @@
 {
   "releases": [
     {
+      "version": "1.2.9",
+      "date": "2026-11-03",
+      "changes": [
+        "When the memory is full, Tacit closes one program instead of the whole screen freezing.",
+        "An app from Apps that asks you to sign in now finishes signing in. The link opened a second copy of the app, and the sign-in started over.",
+        "Apps from Apps can use an NVIDIA graphics card, so apps like Blender start on those computers.",
+        "A right click or a two-finger tap on the dock no longer takes an app off it. On an app that is open but not pinned, it pins it. To unpin, use Settings or Ctrl+P in the search.",
+        "A pointer speed set before 1.2.8 no longer shows a config error when you sign in, and keeps its speed."
+      ]
+    },
+    {
       "version": "1.2.8",
       "date": "2026-11-02",
       "changes": [

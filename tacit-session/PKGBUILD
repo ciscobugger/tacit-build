@@ -2,14 +2,14 @@
 # and win), the lock, idle and screen share settings, the "Tacit" session and Tacit's login screen.
 pkgname=tacit-session
 pkgver=0.2.1
-pkgrel=51
+pkgrel=52
 pkgdesc="Tacit: the Hyprland session"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-shell"
 license=('GPL-3.0-or-later')
 depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland' 'swaybg' 'sddm' 'weston' 'python' 'tacit-shell' 'tacit-portal' 'tacit-boot'
-         # the look GTK and Qt apps are given (xdg/), compressed swap (memory/)
-         'adw-gtk-theme' 'kvantum' 'zram-generator'
+         # the look GTK and Qt apps are given (xdg/), compressed swap and the guard for a full memory (memory/)
+         'adw-gtk-theme' 'kvantum' 'zram-generator' 'earlyoom'
          # the terminal as the owner has it (fish/, starship.toml), the keyring and the home folders (the user presets)
          'fish' 'starship' 'eza' 'ttf-jetbrains-mono-nerd' 'gnome-keyring' 'xdg-user-dirs'
          # Qt's KDE platform theme (the session sets QT_QPA_PLATFORMTHEME=kde): without it Qt read no icon theme and
@@ -20,7 +20,7 @@ depends=('hyprland' 'hypridle' 'matugen' 'hyprlock' 'xdg-desktop-portal-hyprland
 makedepends=('git')
 install=tacit-session.install
 backup=('etc/xdg/kitty/kitty.conf')
-source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=94162609c70bfdbc39418030fab1cc614995bded")
+source=("tacit-shell::git+https://github.com/ciscobugger/tacit-shell.git#commit=da27813a43e00a35ac7c4c3a36132925454b36e6")
 sha256sums=('SKIP')
 
 package() {
@@ -52,6 +52,8 @@ package() {
 	# compressed swap, as on the Book4 (a file in /etc replaces either)
 	install -Dm644 memory/zram-generator.conf -t "$pkgdir/usr/lib/systemd/"
 	install -Dm644 memory/99-tacit-zram.conf -t "$pkgdir/usr/lib/sysctl.d/"
+	# a full memory closes one program instead of freezing the screen (earlyoom, turned on by 80-tacit-memory.preset)
+	install -Dm644 memory/earlyoom.service.d/50-tacit.conf -t "$pkgdir/usr/lib/systemd/system/earlyoom.service.d/"
 	# a restart without the watchdog's kernel line on its black screen
 	install -Dm644 systemd/system.conf.d/50-tacit-quiet-restart.conf -t "$pkgdir/usr/lib/systemd/system.conf.d/"
 	# the terminal: fish's Tacit config, Tacit's prompt
@@ -73,6 +75,7 @@ package() {
 	install -Dm644 updates/80-tacit-updates.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
 	# NetworkManager runs the network: systemd-networkd, its wait-online and homed stay off at the first boot
 	install -Dm644 systemd/system-preset/80-tacit-network.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
+	install -Dm644 systemd/system-preset/80-tacit-memory.preset -t "$pkgdir/usr/lib/systemd/system-preset/"
 	install -Dm644 updates/50-tacit-updates.rules -t "$pkgdir/usr/share/polkit-1/rules.d/"
 	# the keyboard and touchpad awake (udev/): a HID device that autosuspends does not always come back
 	install -Dm644 udev/99-tacit-input-awake.rules -t "$pkgdir/usr/lib/udev/rules.d/"

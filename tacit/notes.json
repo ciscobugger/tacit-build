@@ -1,6 +1,20 @@
 {
   "releases": [
     {
+      "version": "1.2.10",
+      "date": "2026-11-04",
+      "changes": [
+        "The desktop uses less memory, about 200 MB less on our test computers: the rounded screen corners and the notification panel no longer hold memory while nothing shows in them.",
+        "A window you hide comes back if you click its button in the dock while it is still on its way down. Before, it landed and stayed hidden.",
+        "The time in the notch no longer shifts when the notch opens, at 125 % and 150 % scaling.",
+        "The rounded screen corners fade back in after full screen instead of popping in.",
+        "In the Clipboard, Delete deletes. A click near the top or bottom of the button copied the entry instead. Made by alex.",
+        "In the search, the action under your pointer is the one that lights up, so the one you click is the one you see. Made by alex.",
+        "Dragging a pinned app along the dock: it stays under your pointer, the other apps move aside to make room, and it settles into its place when you let go. Made by alex.",
+        "Super+G's Image card lets you choose a picture from your files and change it later, and JPEG pictures show at their real size. Made by alex."
+      ]
+    },
+    {
       "version": "1.2.9",
       "date": "2026-11-03",
       "changes": [

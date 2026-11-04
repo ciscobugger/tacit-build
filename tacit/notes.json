@@ -1,6 +1,17 @@
 {
   "releases": [
     {
+      "version": "1.2.11",
+      "date": "2026-11-04",
+      "changes": [
+        "Right click or two-finger tap an app in the dock for its menu: New window and Quit when it is open, Remove from dock when it is closed. A tap no longer changes your dock on its own.",
+        "If Tacit's own apps went missing from your dock, they come back. Before 1.2.9 a right click or a two-finger tap took an app off without asking. An app you remove after this stays off.",
+        "When an app from Apps has to get ready after an update, the notch says so, with its size, instead of nothing happening.",
+        "When an app from Apps doesn't open, the notch says so, with Try again. Before, nothing showed at all.",
+        "The dock waits for a slow app to open, up to a minute, and stops waiting as soon as the app couldn't start."
+      ]
+    },
+    {
       "version": "1.2.10",
       "date": "2026-11-04",
       "changes": [

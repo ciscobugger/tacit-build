@@ -17,6 +17,16 @@ case $repo in
     tacit) src=$HOME/.config/quickshell/tacit ;;
     thyris) src=$HOME/dev/browser ;;
     tacit-build) src=$HOME/dev/tacit-packages ;;
+    boot) src=$HOME/book4-edge/martida-boot ;;
+    portal) src=$HOME/dev/tacit-portal ;;
+    agent-host) src=$HOME/dev/agent-host ;;
+    backup) src=$HOME/book4-edge/tacit-backup ;;
+    cpu-policy) src=$HOME/dev/tacit-cpu-policy ;;
+    fonts) src=$HOME/dev/tacit-font ;;
+    foot) src=$HOME/dev/tacit-foot/repo ;;
+    icons) src=$HOME/dev/tacit-icons ;;
+    text) src=$HOME/dev/tacit-text ;;
+    book4-charge) src=$HOME/dev/book4-charge ;;
     *) echo "take-pr: $repo is not one of Tacit's public repos" >&2; exit 2 ;;
 esac
 # the public repos live in the organization (moved from the personal account 2026-11-04)

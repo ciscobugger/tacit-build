@@ -185,3 +185,34 @@ publish "$HOME/dev/tacit-kit" tacit-kit \
 publish "$HOME/dev/tacit-music-example" tacit-music-example \
     "A music player made only of Tacit.Kit's parts: an example to build your own app on" \
     "# Music example"
+# Tacit's other parts (public since 2026-11-04, the owner's go): every part that runs on a Tacit computer is open
+publish "$HOME/book4-edge/martida-boot" boot \
+    "Tacit's boot and shutdown splash" \
+    "$(printf '# Boot\n\nTacit'"'"'s boot and shutdown splash. Part of [Tacit](https://tacitos.co).\n\nLicence: GPL-3.0 (LICENSE).')"
+publish "$HOME/dev/tacit-portal" portal \
+    "Tacit's portal: file dialogs, Open with, the keyring prompt, the share picker and live window shares" \
+    "$(printf '# Portal\n\nTacit'"'"'s portal: file dialogs, Open with, the keyring prompt, the share picker and live window shares. Part of [Tacit](https://tacitos.co).\n\nLicence: GPL-3.0 (LICENSE).')"
+publish "$HOME/dev/agent-host" agent-host \
+    "The agent session host behind Praxis and the notch" \
+    "$(printf '# Agent host\n\nThe agent session host behind Praxis and the notch: it runs the person'"'"'s own AI agents and holds what they may do. Part of [Tacit](https://tacitos.co).\n\nLicence: GPL-3.0 (LICENSE).')"
+publish "$HOME/book4-edge/tacit-backup" backup \
+    "Nightly encrypted backup of the home folder's work" \
+    "$(printf '# Backup\n\nNightly encrypted backup of the home folder'"'"'s work. Part of [Tacit](https://tacitos.co).\n\nLicence: GPL-3.0 (LICENSE).')"
+publish "$HOME/dev/tacit-cpu-policy" cpu-policy \
+    "Tacit's power mode, which follows the charger and the battery" \
+    "# CPU policy"
+publish "$HOME/dev/tacit-font" fonts \
+    "Tacit Sans, Mono and Code, under the SIL Open Font License" \
+    "# Fonts"
+publish "$HOME/dev/tacit-foot/repo" foot \
+    "The foot terminal with Tacit's text: a patch to foot" \
+    "# foot"
+publish "$HOME/dev/tacit-icons" icons \
+    "Tacit's symbols, cursor and folder icons" \
+    "# Icons"
+publish "$HOME/dev/tacit-text" text \
+    "Tacit's text: a patch to Qt's text shaders, so text has one gamma across Qt, Thyris, GTK and foot" \
+    "$(printf '# Text\n\nTacit'"'"'s text: a patch to Qt'"'"'s text shaders (qtdeclarative), so text has one gamma across Qt, Thyris, GTK and foot. Part of [Tacit](https://tacitos.co).\n\nLicence: LGPL-3.0, the licence of the Qt code it changes (LICENSE, COPYING, NOTICE).')"
+publish "$HOME/dev/book4-charge" book4-charge \
+    "Charging for the Samsung Galaxy Book4 Edge" \
+    "# Book4 charge"

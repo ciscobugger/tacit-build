@@ -19,7 +19,8 @@ case $repo in
     tacit-build) src=$HOME/dev/tacit-packages ;;
     *) echo "take-pr: $repo is not one of Tacit's public repos" >&2; exit 2 ;;
 esac
-me=$(gh api user -q .login)
+# the public repos live in the organization (moved from the personal account 2026-11-04)
+me=${TACIT_GITHUB:-tacit-os}
 state=$(gh pr view "$n" -R "$me/$repo" --json state -q .state)
 [ "$state" = OPEN ] || { echo "take-pr: $me/$repo#$n is $state" >&2; exit 1; }
 branch=pr/$repo-$n

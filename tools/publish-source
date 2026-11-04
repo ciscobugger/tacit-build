@@ -14,6 +14,8 @@ set -eu
 version=${1:-}
 me=$(gh api user -q .login)
 email="$(gh api user -q .id)+$me@users.noreply.github.com"
+# the public repos live in the organization (moved from the personal account 2026-11-04)
+owner=${TACIT_GITHUB:-tacit-os}
 licence=$HOME/.config/quickshell/tacit/LICENSE
 public=$(dirname "$(readlink -f "$0")")/public
 state=$HOME/.config/tacit-packages/public-sources
@@ -38,7 +40,7 @@ fill() {
     # what every public repo has for contributors (tools/public/common: CONTRIBUTING.md, the issue forms, the pull
     # request template and its sign-off check), the issue forms pointing at this repo's own security form
     cp -r "$public/common/." "$w/"
-    sed -i "s|{repo}|$me/$name|g" "$w/.github/ISSUE_TEMPLATE/config.yml"
+    sed -i "s|{repo}|$owner/$name|g" "$w/.github/ISSUE_TEMPLATE/config.yml"
     # what coding agents read first (tools/public/agents/<name>.md), and a CLAUDE.md that points Claude Code at it
     if [ -f "$public/agents/$name.md" ]; then
         cp "$public/agents/$name.md" "$w/AGENTS.md"
@@ -61,15 +63,15 @@ publish() {
     fi
     base=$(sed -n "s/^$name //p" "$state" 2>/dev/null)
     w=$(mktemp -d)
-    if gh repo view "$me/$name" >/dev/null 2>&1; then
+    if gh repo view "$owner/$name" >/dev/null 2>&1; then
         [ -n "$base" ] || { echo "publish-source: $state names no private commit $name has reached" >&2; exit 1; }
-        git clone -q "https://github.com/$me/$name.git" "$w" 2>/dev/null
+        git clone -q "https://github.com/$owner/$name.git" "$w" 2>/dev/null
     else
         # a repo published for the first time: made only when this is not a dry run (DRY never creates anything on
         # GitHub), and its first public commit is one clean copy of the private repo as it is now
-        [ -n "${DRY:-}" ] || gh repo create "$me/$name" --public --description "$desc" --homepage https://tacitos.co >/dev/null
+        [ -n "${DRY:-}" ] || gh repo create "$owner/$name" --public --description "$desc" --homepage https://tacitos.co >/dev/null
         git -C "$w" init -q
-        git -C "$w" remote add origin "https://github.com/$me/$name.git"
+        git -C "$w" remote add origin "https://github.com/$owner/$name.git"
         base=$(git -C "$src" rev-parse "$head")
         first=1
     fi
@@ -149,13 +151,13 @@ publish() {
     local prs
     prs=$(git -C "$w" log --reverse --format='%(trailers:key=Public-PR,valueonly,separator=)%x09%H' "$range" | grep -v '^\s' || true)
     [ "$n" -gt 0 ] && git -C "$w" push -q -u origin main
-    for pr in $(cut -f1 <<<"$prs" | grep "^$me/$name#" | sort -u); do
+    for pr in $(cut -f1 <<<"$prs" | grep "^$owner/$name#" | sort -u); do
         local links
-        links=$(grep -F "$pr"$'\t' <<<"$prs" | cut -f2 | sed "s|^|https://github.com/$me/$name/commit/|")
+        links=$(grep -F "$pr"$'\t' <<<"$prs" | cut -f2 | sed "s|^|https://github.com/$owner/$name/commit/|")
         # thanked and closed by an earlier run (1.2.1 published twice): not a second time
-        [ "$(gh pr view "${pr#*#}" -R "$me/$name" --json state -q .state 2>/dev/null)" = OPEN ] || continue
-        gh pr comment "${pr#*#}" -R "$me/$name" --body "$(printf 'Thank you. This is in Tacit now, under your name:\n\n%s\n\nIt ships in the next release.' "$links")" >/dev/null
-        gh pr close "${pr#*#}" -R "$me/$name" >/dev/null
+        [ "$(gh pr view "${pr#*#}" -R "$owner/$name" --json state -q .state 2>/dev/null)" = OPEN ] || continue
+        gh pr comment "${pr#*#}" -R "$owner/$name" --body "$(printf 'Thank you. This is in Tacit now, under your name:\n\n%s\n\nIt ships in the next release.' "$links")" >/dev/null
+        gh pr close "${pr#*#}" -R "$owner/$name" >/dev/null
         echo "$name: closed $pr with its commits"
     done
     if [ -n "$version" ] && ! git -C "$w" rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
@@ -163,7 +165,7 @@ publish() {
         git -C "$w" push -q origin "v$version"
     fi
     if grep -q "^$name " "$state" 2>/dev/null; then sed -i "s/^$name .*/$name $last/" "$state"; else echo "$name $last" >> "$state"; fi
-    echo "$name: $n commits$([ -n "$version" ] && echo ", tagged v$version") — https://github.com/$me/$name"
+    echo "$name: $n commits$([ -n "$version" ] && echo ", tagged v$version") — https://github.com/$owner/$name"
     rm -rf "$w"
 }
 

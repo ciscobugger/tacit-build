@@ -20,7 +20,7 @@ built.
 
 ## Rules
 
-This app follows the kit's guide for app makers: https://github.com/ciscobugger/tacit-kit/blob/main/docs/agents.md
+This app follows the kit's guide for app makers: https://github.com/tacit-os/tacit-kit/blob/main/docs/agents.md
 (also at https://design.tacitos.co/agents.md). Read it before changing anything. In short:
 
 - Build from kit parts; choose a part by the job it does (the guide's table).

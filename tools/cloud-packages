@@ -1,6 +1,6 @@
 #!/bin/bash
 # tools/cloud-packages <recipe> ...: builds Tacit's x86_64 packages on the cloud machine (cef-build-x64, which must be
-# running; it is left as found), in order, in a fresh Arch container. Private sources (github.com/ciscobugger) are
+# running; it is left as found), in order, in a fresh Arch container. Private sources (github.com/tacit-os) are
 # fetched here with the GitHub login and go with the recipes, so no login reaches the machine; public ones are fetched
 # there. Packages of ours a recipe needs (tacit-cef for tacit-thyris) come from out/x86_64/. The packages come back into
 # out/x86_64/, each checked as build.sh checks. CPUS (default 8) caps the container beside a running engine build.
@@ -10,7 +10,7 @@ at=(--project YOUR-PROJECT --zone europe-west4-a); vm=cef-build-x64
 [ $# -gt 0 ] || { echo "usage: tools/cloud-packages <recipe> ..." >&2; exit 1; }
 for p in "$@"; do
 	[ -f "$p/PKGBUILD" ] || { echo "no recipe $p" >&2; exit 1; }
-	if grep -q "github.com/ciscobugger" "$p/PKGBUILD"; then
+	if grep -q -E "github.com/(ciscobugger|tacit-os)" "$p/PKGBUILD"; then
 		(cd "$p" && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="credential.https://github.com.helper" \
 			GIT_CONFIG_VALUE_0="!/usr/bin/gh auth git-credential" makepkg --verifysource --noconfirm >/dev/null 2>&1) \
 			|| { echo "fetching $p's sources failed" >&2; exit 1; }

@@ -49,3 +49,28 @@ commit (`git commit -s`).
 - **Do not edit** README.md, CONTRIBUTING.md, AGENTS.md, CLAUDE.md, LICENSE, `.github/` or `docs/`: they are written
   by the publishing step and a change to them is lost.
 - **Do not add a dependency** (a package, a Python module, a font) without saying so in the pull request.
+
+## Rules for the shell's behaviour
+
+How the desktop's surfaces (the notch, panels, menus, pickers) open, close and sit on the screen. A change that
+breaks one is sent back, however good it looks.
+
+- **Every surface has a way out, by pointer and by key.** One that opens on a click or a key closes on a click
+  elsewhere: it enrols in `GlobalFocusGrab` while open (`addDismissable` when it opens, `removeDismissable` when it
+  closes, close itself in `onDismissed`), as `DropShelfPanel.qml` and `Settings.qml` do. Esc closes it too: listen to
+  `IslandController.collapseExpansion` (the compositor's Esc), or handle Esc yourself while you hold the keyboard.
+- **Opened by hover, closed by leaving.** A surface that opens under the pointer closes when the pointer leaves and
+  stays out of the grab: the grab takes the keyboard from the window the person is typing in. Never count on the
+  leave alone, though: a touch screen and a drag never send one. Once the person clicks it, it closes on a click away
+  as well (`byHover` in `modules/ii/island/IslandContent.qml`).
+- **Hold the keyboard only while open.** A layer window asks for keys (`WlrLayershell.keyboardFocus`) only while it
+  is open, and never when a hover opened it. While it holds them exclusively, a click on a window cannot take them
+  back, so the click-away and Esc above are its only way out.
+- **Keep controls on the screen.** Buttons placed beside something the person chose (a selection, a window, the
+  pointer) are kept at least 16 px inside the screen's edges, moving inside the chosen area when there is no room
+  around it. Screens have rounded corners and hide what sits flush against them.
+- **Windows never move for the shell.** A shell surface lies over windows like a menu; its reserved space
+  (`exclusiveZone`) never changes while it opens, peeks or closes.
+- **A layer window keeps one size.** Hyprland animates a layer that changes size, so the content stretches and
+  swings. Size the window once, move and resize what is inside it, and set `mask` to the part that takes clicks.
+- **Nothing opens under a passing pointer** (CONTRIBUTING.md). The notch's sheet is the one exception.

@@ -1,8 +1,8 @@
 # Tacit: the cursor (painted from the wallpaper's accent by tacit-cursor-paint) and the Quiet folder icons.
 # Tacit's symbol fonts are part of tacit-shell, which loads them.
 pkgname=tacit-icons
-pkgver=0.1.0
-pkgrel=2
+pkgver=0.1.1
+pkgrel=1
 pkgdesc="Tacit: cursor and folder icons"
 arch=('any')
 url="https://github.com/ciscobugger/tacit-icons"

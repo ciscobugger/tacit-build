@@ -42,7 +42,15 @@ printf '%s\n' "bootmodes=('bios.syslinux' 'uefi.grub')" >> "$p/profiledef.sh"
 # the stick's boot menu says Tacit, not Arch Linux, and is not shown: the stick starts Tacit at once (Esc or Shift
 # while it starts still opens it, GRUB's hidden style)
 sed -i 's/Arch Linux/Tacit/g' $p/grub/*.cfg $p/efiboot/loader/entries/*.conf $p/syslinux/*.cfg 2>/dev/null || true
-sed -i 's/^set timeout=.*/set timeout=0\nset timeout_style=hidden/' $p/grub/grub.cfg $p/grub/loopback.cfg 2>/dev/null || true
+# (the baseline writes "timeout=15" without "set", so a pattern that wanted "set" never matched: the 1.2.7 stick
+# counted down from 15 under GRUB's own menu)
+sed -i -E 's/^(set )?timeout=.*/timeout=0/; s/^(set )?timeout_style=.*/timeout_style=hidden/' $p/grub/grub.cfg $p/grub/loopback.cfg 2>/dev/null || true
+# and starts quietly: no kernel or systemd lines scrolling past before Setup (people never see logs; the 1.2.7 stick
+# showed a full screen of them, ending in "A start job is running ... (no limit)")
+QUIET="quiet loglevel=3 rd.udev.log_level=3 systemd.show_status=false vt.global_cursor_default=0"
+sed -i -E "s|^(\s*linux\s+.*vmlinuz-linux.*)$|\1 $QUIET|" $p/grub/*.cfg 2>/dev/null || true
+sed -i -E "s|^(\s*APPEND\s+.*archisobasedir.*)$|\1 $QUIET|" $p/syslinux/*.cfg 2>/dev/null || true
+sed -i -E "s|^(options\s+.*archisobasedir.*)$|\1 $QUIET|" $p/efiboot/loader/entries/*.conf 2>/dev/null || true
 # a SquashFS image, as tacit-install copies it with unsquashfs (its progress in percent); the baseline makes EROFS
 sed -i "s/^airootfs_image_type=.*/airootfs_image_type='squashfs'/; s/^airootfs_image_tool_options=.*/airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '15' '-b' '1M')/" $p/profiledef.sh
 sed -i 's|^file_permissions=(|file_permissions=(\n  ["/usr/lib/tacit/tacit-live"]="0:0:755"|' $p/profiledef.sh

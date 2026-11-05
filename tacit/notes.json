@@ -4,7 +4,7 @@
       "version": "1.2.12",
       "date": "2026-11-05",
       "changes": [
-        "A click outside the notch closes it when you opened it with a click, a key or by dragging something over it. It used to close only when the pointer left it, so it could stay open with no way out.",
+        "A click outside the notch closes it. It used to close only when the pointer left it, so it could stay open with no way out.",
         "The screen recording's choice closes when you click outside it. Before, only Esc or the shortcut again closed it.",
         "When you record an area as tall as the screen, Cancel and Record stay on the screen. A rounded screen corner could hide Record.",
         "The pointer takes your wallpaper's colour again when you change the wallpaper. It kept the old colour until you logged out."

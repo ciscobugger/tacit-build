@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "1.2.13",
+      "date": "2026-11-05",
+      "changes": [
+        "A file's menu on the desktop stays on the screen. Near the right or bottom edge it was cut off, so Rename and Move to the trash could not be read.",
+        "The request for your login keyring's password goes away once your password at the lock has opened it. It could stay in the notch after the keyring was already open.",
+        "Searching for settings shows Settings once. It was listed twice.",
+        "The brightness slider in Settings follows the brightness keys and the control panel while it is open, and stays where you drag it. It kept the old level until you came back to the window, and jumped back after a drag."
+      ]
+    },
+    {
       "version": "1.2.12",
       "date": "2026-11-05",
       "changes": [

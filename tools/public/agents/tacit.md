@@ -59,10 +59,12 @@ breaks one is sent back, however good it looks.
   elsewhere: it enrols in `GlobalFocusGrab` while open (`addDismissable` when it opens, `removeDismissable` when it
   closes, close itself in `onDismissed`), as `DropShelfPanel.qml` and `Settings.qml` do. Esc closes it too: listen to
   `IslandController.collapseExpansion` (the compositor's Esc), or handle Esc yourself while you hold the keyboard.
-- **Opened by hover, closed by leaving.** A surface that opens under the pointer closes when the pointer leaves and
-  stays out of the grab: the grab takes the keyboard from the window the person is typing in. Never count on the
-  leave alone, though: a touch screen and a drag never send one. Once the person clicks it, it closes on a click away
-  as well (`byHover` in `modules/ii/island/IslandContent.qml`).
+- **A small window can't use the grab.** Hyprland drops a grab as soon as the pointer rests on anything outside it,
+  so a small, masked window like the notch's would close the moment it opens from a key; the grab also takes the
+  keyboard. Such a surface puts a transparent window over the rest of the screen while it is open, with a hole where
+  it is, and closes on a press there (`awayCatcher` in `modules/ii/island/Island.qml`).
+- **Never count on the pointer leaving.** A surface that closes when the pointer leaves needs a click-away too: a
+  touch screen and a drag never send the leave.
 - **Hold the keyboard only while open.** A layer window asks for keys (`WlrLayershell.keyboardFocus`) only while it
   is open, and never when a hover opened it. While it holds them exclusively, a click on a window cannot take them
   back, so the click-away and Esc above are its only way out.
